@@ -1,9 +1,0 @@
-README.md
-setup.py
-base/__init__.py
-base/base.py
-sk_base.egg-info/PKG-INFO
-sk_base.egg-info/SOURCES.txt
-sk_base.egg-info/dependency_links.txt
-sk_base.egg-info/requires.txt
-sk_base.egg-info/top_level.txt
