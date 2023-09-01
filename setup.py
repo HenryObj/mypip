@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="sk_base",
+    name="henryobj",
     version="0.1", # need to increment this everytime otherwise Pypi will not accept the new version
     packages=find_packages(),
     install_requires=[
