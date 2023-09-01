@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="myutilities",
+    name="base",
     version="0.1", # need to increment this everytime otherwise Pypi will not accept the new version
     packages=find_packages(),
     install_requires=[
