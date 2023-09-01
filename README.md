@@ -5,11 +5,10 @@ This module is to simplify the access to my utility functions. Feel free to use 
 
 
 ## Last Update - 1st of September 2023
-
+First commit
 
 ## Some notes
-
-
+We shall present some cool functions here.
 
 **Dependencies**
 If not already installed, this module will install the following packages and their dependencies:
