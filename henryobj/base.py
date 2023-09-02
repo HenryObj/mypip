@@ -37,69 +37,13 @@ MODEL_EMB = r"text-embedding-ada-002"
 # *************************************** General Utilities ***************************************
 # *************************************************************************************************
 
-# Better use tokenizer for production but good enough in the meantime
-def add_space_to_punctuation(text):
+def correct_spaces_in_text(text):
     '''
-    To ensure that any "." "?" "!" ";" and "," is followed by a space and doesn't have a before space.
+    Ensures punctuation marks like ".", "?", "!", ";", and "," are correctly spaced with only one space with the next non-space char. 
+
+    Example: 'Hello,world!How     are you?' would be converted to 'Hello, world! How are you?'
     '''
     return re.sub(r"([\.,\?!;])\s*(\S)", r"\1 \2", text)
-
-def check_co() -> bool:
-    '''
-    Returns true if we have an internet connection. False otherwise.
-    '''
-    try:
-        requests.head("http://google.com")
-        return True
-    except Exception:
-        return False
-
-def check_valid_url(url):
-    '''
-    Function which takes a string and return True if the url is valid.
-    '''
-    try:
-        result = urlparse(url)
-        if len(result.netloc) <= 1: return False # Checks if the user has put a local file
-        return all([result.scheme, result.netloc])
-    except ValueError:
-        return False
-
-def clean_url(url):
-    '''
-    User-submitted urls might not be perfectly fit to be processed by check_valid_url
-    '''
-    url = url.strip()
-    if not url.startswith('http'):
-        url = 'https://' + url
-    parsed_url = urlparse(url)
-
-    # Clean the domain by removing any unwanted characters
-    cleaned_netloc = re.sub(r'[^a-zA-Z0-9\.\-]', '', parsed_url.netloc)
-
-    # Ensure proper percent-encoding of the path component
-    unquoted_path = unquote(parsed_url.path)
-    quoted_path = quote(unquoted_path)
-
-    cleaned_url = urlunparse(parsed_url._replace(netloc=cleaned_netloc, path=quoted_path))
-    return cleaned_url
-
-def get_local_domain(from_url):
-    '''
-    Get the local domain from a given URL.
-    Will return the same domain for https://chat.openai.com/chat" and https://openai.com/chat".
-    '''
-    try:
-        netloc = urlparse(from_url).netloc
-        parts = netloc.split(".")
-        if len(parts) > 2:
-            domain = parts[-2]
-        else:
-            domain = parts[0]
-        print("URL: ", from_url, " Domain: ", str(domain))
-        return str(domain)
-    except Exception as e:
-        log_issue(e, get_local_domain, f"For {from_url}")
 
 def is_json(myjson: str) -> bool:
   '''
@@ -117,11 +61,22 @@ def format_datetime(datetime):
     '''
     return datetime.strftime('%d-%b-%Y')
 
+def format_timestamp(timestamp: str) -> str:
+    '''
+    Converts a timestamp string to a "10-Jan-2022" format.
+    
+    Returns original timestamp if parsing fails.
+    '''
+    try:
+        dt = datetime.datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S')
+        return format_datetime(dt)
+    except ValueError:
+        return timestamp
+
 def generate_unique_integer():
     '''
     Returns a random integer. Should be unique because between 0 and 2*32 -1 but still we can check after.
     '''
-    # Generate a random number within the range of a 32-bit integer
     rand_num = random.randint(0, (1 << 31) - 1)
     return rand_num
 
@@ -291,7 +246,7 @@ def remove_excess(text: str) -> str:
 
 def remove_non_printable(text :str) -> str:
     '''
-    Strong cleaner which removes any char that is not ascii.
+    Strong cleaner which removes non-ASCII characters from the input text.
     '''
     text = re.sub(r'[\x00-\x1f\x7f-\x9f]', '', text) # removes non printable char
     y = text.split()
@@ -323,6 +278,67 @@ def sanitize_text(text : str) -> str:
     text = re.sub("<[^>]*>", "", text) # Remove HTML tags
     text = " ".join(text.split()) # Replace multiple consecutive spaces with a single space
     return text
+
+# *************************************************************************************************
+# *************************************** Internet Related ****************************************
+# *************************************************************************************************
+
+def check_co() -> bool:
+    '''
+    Returns true if we have an internet connection. False otherwise.
+    '''
+    try:
+        requests.head("http://google.com")
+        return True
+    except Exception:
+        return False
+
+def check_valid_url(url):
+    '''
+    Function which takes a string and return True if the url is valid.
+    '''
+    try:
+        result = urlparse(url)
+        if len(result.netloc) <= 1: return False # Checks if the user has put a local file
+        return all([result.scheme, result.netloc])
+    except ValueError:
+        return False
+
+def clean_url(url):
+    '''
+    User-submitted urls might not be perfectly fit to be processed by check_valid_url
+    '''
+    url = url.strip()
+    if not url.startswith('http'):
+        url = 'https://' + url
+    parsed_url = urlparse(url)
+
+    # Clean the domain by removing any unwanted characters
+    cleaned_netloc = re.sub(r'[^a-zA-Z0-9\.\-]', '', parsed_url.netloc)
+
+    # Ensure proper percent-encoding of the path component
+    unquoted_path = unquote(parsed_url.path)
+    quoted_path = quote(unquoted_path)
+
+    cleaned_url = urlunparse(parsed_url._replace(netloc=cleaned_netloc, path=quoted_path))
+    return cleaned_url
+
+def get_local_domain(from_url):
+    '''
+    Get the local domain from a given URL.
+    Will return the same domain for https://chat.openai.com/chat" and https://openai.com/chat".
+    '''
+    try:
+        netloc = urlparse(from_url).netloc
+        parts = netloc.split(".")
+        if len(parts) > 2:
+            domain = parts[-2]
+        else:
+            domain = parts[0]
+        print("URL: ", from_url, " Domain: ", str(domain))
+        return str(domain)
+    except Exception as e:
+        log_issue(e, get_local_domain, f"For {from_url}")
 
 # *************************************************************************************************
 # ****************************************** GPT Related ******************************************
