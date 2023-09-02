@@ -1,5 +1,8 @@
 /__pycache__/
 tester/
 venv/
-helper.txt
+build/
+dist/
+henryobj.egg-info/
+helper.md
 update.sh
