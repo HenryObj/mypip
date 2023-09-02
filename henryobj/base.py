@@ -2,7 +2,7 @@
     @Author:				Henry Obegi <HenryObj>
     @Email:					hobegi@gmail.com
     @Creation:				Friday 1st of September
-    @LastModif:             
+    @LastModif:             Saterday 2nd of September
     @Filename:				base.py
     @Purpose                All the utility functions
     @Partof                 Spar
@@ -16,9 +16,11 @@ import datetime
 import inspect
 import tiktoken
 import json
-from typing import Callable, Any
+from typing import Callable, Any, Union, List, Dict
 import re
 import time
+from urllib.parse import urlparse, urlunparse, quote, unquote
+import random
 
 # ****** PATHS & GLOBAL VARIABLES *******
 
@@ -31,12 +33,16 @@ OPEN_AI_ISSUE = r"%$144$%" # When OpenAI is down
 MODEL_EMB = r"text-embedding-ada-002"
 
 
-# ****************** FUNCS ******************
-
-
 # *************************************************************************************************
 # *************************************** General Utilities ***************************************
 # *************************************************************************************************
+
+# Better use tokenizer for production but good enough in the meantime
+def add_space_to_punctuation(text):
+    '''
+    To ensure that any "." "?" "!" ";" and "," is followed by a space and doesn't have a before space.
+    '''
+    return re.sub(r"([\.,\?!;])\s*(\S)", r"\1 \2", text)
 
 def check_co() -> bool:
     '''
@@ -48,22 +54,86 @@ def check_co() -> bool:
     except Exception:
         return False
 
-def is_json(myjson):
+def check_valid_url(url):
+    '''
+    Function which takes a string and return True if the url is valid.
+    '''
+    try:
+        result = urlparse(url)
+        if len(result.netloc) <= 1: return False # Checks if the user has put a local file
+        return all([result.scheme, result.netloc])
+    except ValueError:
+        return False
+
+def clean_url(url):
+    '''
+    User-submitted urls might not be perfectly fit to be processed by check_valid_url
+    '''
+    url = url.strip()
+    if not url.startswith('http'):
+        url = 'https://' + url
+    parsed_url = urlparse(url)
+
+    # Clean the domain by removing any unwanted characters
+    cleaned_netloc = re.sub(r'[^a-zA-Z0-9\.\-]', '', parsed_url.netloc)
+
+    # Ensure proper percent-encoding of the path component
+    unquoted_path = unquote(parsed_url.path)
+    quoted_path = quote(unquoted_path)
+
+    cleaned_url = urlunparse(parsed_url._replace(netloc=cleaned_netloc, path=quoted_path))
+    return cleaned_url
+
+def get_local_domain(from_url):
+    '''
+    Get the local domain from a given URL.
+    Will return the same domain for https://chat.openai.com/chat" and https://openai.com/chat".
+    '''
+    try:
+        netloc = urlparse(from_url).netloc
+        parts = netloc.split(".")
+        if len(parts) > 2:
+            domain = parts[-2]
+        else:
+            domain = parts[0]
+        print("URL: ", from_url, " Domain: ", str(domain))
+        return str(domain)
+    except Exception as e:
+        log_issue(e, get_local_domain, f"For {from_url}")
+
+def is_json(myjson: str) -> bool:
+  '''
+  Returns True if the input is in json format. False otherwise.
+  '''
   try:
     json.loads(myjson)
   except ValueError as e:
     return False
   return True
 
+def format_datetime(datetime):
+    '''
+    Takes a Datetime as an input and returns a string in the format "10-Jan-2022"
+    '''
+    return datetime.strftime('%d-%b-%Y')
+
+def generate_unique_integer():
+    '''
+    Returns a random integer. Should be unique because between 0 and 2*32 -1 but still we can check after.
+    '''
+    # Generate a random number within the range of a 32-bit integer
+    rand_num = random.randint(0, (1 << 31) - 1)
+    return rand_num
+
 def get_content_of_file(file_path : str) -> str:
     '''
-    Mini function not to write everytime the with open etc.
+    Reads and returns the content of a file.
     '''
     with open(file_path,"r") as file:
         x = file.read()
     return x
 
-def get_module_name(func) -> str:
+def get_module_name(func: Callable[..., Any]) -> str:
     '''
     Given a function, returns the name of the module in which it is defined.
     '''
@@ -73,32 +143,32 @@ def get_module_name(func) -> str:
     else:
         return module.__name__.split('.')[-1]
 
-def get_now(time = False) -> str:
+def get_now(exact: bool = False) -> str:
     '''
     Small function to get the timestamp in string format.
-    By default we return the following format: "10_Jan_2023" but if time is True, we will return 10_Jan_2023_@15h23s33
+    By default we return the following format: "10_Jan_2023" but if exact is True, we will return 10_Jan_2023_@15h23s33
     '''
     now = datetime.datetime.now()
-    return datetime.datetime.strftime(now, "%d_%b_%Y@%Hh%Ms%S") if time else datetime.datetime.strftime(now, "%d_%b_%Y")
+    return datetime.datetime.strftime(now, "%d_%b_%Y@%Hh%Ms%S") if exact else datetime.datetime.strftime(now, "%d_%b_%Y")
 
 def log_issue(exception: Exception, func: Callable[..., Any], additional_info: str = "") -> None:
     '''
     Logs an issue. Can be called anywhere and will display an error message showing the module, the function, the exception and if specified, the additional info.
 
-    Parameters:
-    - exception (Exception): The exception that was raised.
-    - func (Callable[..., Any]): The function in which the exception occurred.
-    - additional_info (str): Any additional information to log. Default is an empty string.
+    Args:
+        exception (Exception): The exception that was raised.
+        func (Callable[..., Any]): The function in which the exception occurred.
+        additional_info (str): Any additional information to log. Default is an empty string.
 
     Returns:
-    None
+        None
     '''
     now = datetime.datetime.now().strftime("%d/%m/%y %H:%M:%S")
     module_name = get_module_name(func)
     print(f" * ERROR HO144 * Issue in module {module_name} with {func.__name__} ** Info: {additional_info} ** Exception: {exception} ** When: {now}\n")
 
 # local tests
-def lprint(*args):
+def lprint(*args: Any):
     '''
     Custom print function to display that things are well at this particular line number.
 
@@ -111,7 +181,7 @@ def lprint(*args):
     else:
         print(f"Line {line_number}: {args}")
 
-def new_chunk_text(text: str, target_token = 200) -> list:
+def new_chunk_text(text: str, target_token: int = 200) -> List[str]:
     '''
     New function to chunk the text in better blocks.
     The idea is to pass several times and make the ideal blocks first (rather than one time targetting the ideal token) then breaking the long ones.
@@ -171,7 +241,7 @@ def new_chunk_text(text: str, target_token = 200) -> list:
         return ""
         # We could have a back up function here
 
-def perf(function):
+def perf(function: Callable[..., Any]):
     '''
     To be used as a decorator to a function to display the time to run the said function.
     '''
@@ -184,10 +254,9 @@ def perf(function):
         return res
     return wrapper
 
-def remove_break_lines(text):
+def remove_break_lines(text: str) -> str:
     '''
-    Removes all double space and '\n'.
-    Returns the text.
+    Replaces all occurrences of double spaces and newline characters ('\n') with a single space.
     '''
     jump = '\n'
     double_space = '  '
@@ -197,7 +266,7 @@ def remove_break_lines(text):
         text = text.replace(double_space, ' ')
     return text
 
-def remove_jump_double_punc(text):
+def remove_jump_double_punc(text: str) -> str:
     '''
     Removes all '\n' and '..' for the function to analyze sentiments.
     '''
@@ -208,10 +277,9 @@ def remove_jump_double_punc(text):
         text = text.replace(double,'.')
     return text
 
-def remove_excess(text :str) -> str:
+def remove_excess(text: str) -> str:
     '''
-    Removes all double space and doubles break lines '\n\n'.
-    Returns the text.
+    Replaces all occurrences of double newlines ('\n\n') and double spaces with single newline and space, respectively.
     '''
     double_jump = '\n\n'
     double_space = '  '
@@ -221,13 +289,28 @@ def remove_excess(text :str) -> str:
         text = text.replace(double_space, ' ')
     return text
 
-def sanitize_json_response(response):
+def remove_non_printable(text :str) -> str:
     '''
-    Function to make sure we have a json-like structure.
-    Returns False if issue, otherwise returns the sanitized answer.
+    Strong cleaner which removes any char that is not ascii.
     '''
-    (bal1,bal2) = response.find("{"), response.find("}")
-    if bal1 < 0 or bal2 < 0: return False
+    text = re.sub(r'[\x00-\x1f\x7f-\x9f]', '', text) # removes non printable char
+    y = text.split()
+    z = [el for el in y if all(ord(e) < 128 for e in el)]
+    return ' '.join(z)
+
+def sanitize_json_response(response: str) -> Union[str, bool]:
+    """
+    Ensures the response has a JSON-like structure.
+
+    Args:
+        response (str): The input string to sanitize.
+
+    Returns:
+        Union[str, bool]: The sanitized answer if the response is JSON-like; otherwise, False.
+    """
+    bal1, bal2 = response.find("{"), response.find("}")
+    if bal1 < 0 or bal2 < 0: 
+        return False
     return response[bal1:bal2+1]
 
 def sanitize_text(text : str) -> str:
@@ -245,7 +328,7 @@ def sanitize_text(text : str) -> str:
 # ****************************************** GPT Related ******************************************
 # *************************************************************************************************
 
-def add_content_to_chatTable(content : str, role : str, chatTable : list) -> list:
+def add_content_to_chatTable(content: str, role: str, chatTable: List[Dict[str, str]]) -> List[Dict[str, str]]:
     '''
     Feeds a chatTable with the new query. Returns the new chatTable.
     Role is either 'assistant' when the AI is answering or 'user' when the user has a question.
@@ -262,29 +345,53 @@ def add_content_to_chatTable(content : str, role : str, chatTable : list) -> lis
             chatTable.append({"role":"assistant", "content": f"{content}"})
         return chatTable
 
-def ask_question_gpt(role : str, question : str, model = MODEL_CHAT, max_tokens = 4000) -> str:
-    '''
-    Function to ask a question to ChatGPT. Returns the reply to this question in a text format.
-    You must define a role.
-    '''
-    current_chat =  initialize_role_in_chatTable(role) # we create the chatTable
-    current_chat = add_content_to_chatTable(question, "user", current_chat) # we add the question
+def ask_question_gpt(role: str, question: str, model=MODEL_CHAT, max_tokens=4000, check_length=True) -> str:
+    """
+    Queries ChatGPT with a specific question.
+
+    Args:
+        role (str): The system prompt to be initialized in the chat table. How you want ChatGPT to behave.
+        question (str): The question to ask the model.
+        model (str, optional): The model to use. Defaults to the chat model 3.5 turbo.
+        max_tokens (int, optional): Maximum number of tokens for the reply. Defaults to 4000.
+        check_length (bool, optional): Will perform an aproximate check on the length of the input not to query GPT if too long.
+    Returns:
+        str: The model's reply to the question.
+
+    Note:
+        If max_tokens is set to 4000, a print statement will prompt you to adjust it.
+    """
+    if check_length and calculate_token_aproximatively(role) + calculate_token_aproximatively(question) > 5000:
+        print("Your input is likely too long for one query. You can use 'new_chunk_text' for that")
+        return ""
+    current_chat = initialize_role_in_chatTable(role)
+    current_chat = add_content_to_chatTable(question, "user", current_chat)
     if max_tokens == 4000:
-        print(f"Will ask GPT and the answer is max: {max_tokens} for the question ****STARTQUESTION*****{question}\n****ENDQUESTION*****")
-        #max_tokens -= (calculate_token_aproximatively(role)+ calculate_token_aproximatively(question))
-    #print(f"Will ask GPT and the answer is max: {max_tokens} for the question ****STARTQUESTION*****{question}\n****ENDQUESTION*****")
+        print(f"You are querying GPT with a maximum response length of about 3000 words for the question: {question}")
     return request_gpt(current_chat, max_token=max_tokens, model=model)
 
-# Calculating token is too expensive in time (about 1 sec for 1000 words)
-def calculate_token(text : str) -> int:
-    '''
-    New version with the tokenizer api. Takes about 0.13 seconds.
-    No check on whether text is a string so make sure param is correct (force str() before using).
-    '''
-    encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
-    return len(encoding.encode(text))
 
-def calculate_token_aproximatively(text : str) -> str:
+def calculate_token(text: str) -> int:
+    """
+    Calculates the number of tokens for a given text using a specific tokenizer.
+
+    Args:
+        text (str): The text to calculate tokens for.
+
+    Returns:
+        int: The number of tokens in the text or -1 if there's an error.
+    
+    Note:
+        Uses the tokenizer API and takes approximately 0.13 seconds per query.
+    """
+    try:
+        encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
+        return len(encoding.encode(text))
+    except Exception as e:
+        print(f"Error calculating tokens. Input type: {type(text)}. Exception: {e}")
+        return -1
+
+def calculate_token_aproximatively(text: str) -> int:
     '''
     Returns the token cost for a given text input without calling tiktoken.
 
@@ -310,7 +417,7 @@ def calculate_token_aproximatively(text : str) -> str:
         log_issue(e,calculate_token_aproximatively,f"The text was {type(text)} and {len(text)}")
         return calculate_token(text)
 
-def change_role_chatTable(previous_chat : list, new_role : str) -> list:
+def change_role_chatTable(previous_chat: List[Dict[str, str]], new_role: str) -> List[Dict[str, str]]:
     '''
     Function to change the role defined at the beginning of a chat with a new role.
     Returns the new chatTable with the system role updated.
@@ -327,7 +434,7 @@ def change_role_chatTable(previous_chat : list, new_role : str) -> list:
     previous_chat.pop(0)
     return [{'role': 'system', 'content': new_role}] + previous_chat
 
-def embed_text(text, max_attempts = 3):
+def embed_text(text: str, max_attempts: int = 3):
     '''
     Micro function which returns the embedding of one chunk of text or 0 if issue.
     Used for the multi-threading.
@@ -344,20 +451,49 @@ def embed_text(text, max_attempts = 3):
     if check_co(): log_issue(f"No answer despite {max_attempts} attempts", embed_text, "Open AI is down")
     return res
 
-def initialize_role_in_chatTable(role_definition : str) -> list:
+def initialize_role_in_chatTable(role_definition: str) -> List[Dict[str, str]]:
     '''
     We need to define how we want our model to perform.
     This function takes this definition as a input and returns it into the chat_table_format.
     '''
     return [{"role":"system", "content":role_definition}]
 
-def request_gpt(current_chat, max_token, stop_list = False, max_attempts = 3, model = MODEL_CHAT):
+# For local tests
+def print_len_token_price(file_path_or_text, Embed = False):
     '''
-    Function calling the openAI completion endpoint.
-    Parameters are the prompt, the max_token in the reply, the stops we use, and the number of attempt.
-    Temperature is at 0 (no 'creativity') and top_p is at 1 ('take the best').
-    Returns the text or OPEN_AI_ISSUE is OpenAI is down.
+    Basic function to print out the length, the number of token, of a given file or text.
+    Chat gpt-3.5-turbo is at $0.002 per 1K token while Embedding is at $0.0004 per 1K tokens. If not specified, we assume it's Chat gpt-3.5-turbo.
     '''
+    price = 0.002 if not Embed else 0.0004
+    if os.path.isfile(file_path_or_text):
+        name = os.path.basename(file_path_or_text)
+        with open(file_path_or_text, "r") as file:
+            content = file.read()
+    elif isinstance(file_path_or_text, str):
+        content = file_path_or_text
+        name = "Input text"
+    else:
+        return # to avoid error in case of wrong input
+    tok = calculate_token(content)
+    out = f"{name}: {len(content)} chars  **  ~ {tok} tokens ** ~ ${round(tok/1000 * price,2)}"
+    print(out)
+
+def request_gpt(current_chat : list, max_token : int, stop_list = False, max_attempts = 3, model = MODEL_CHAT, temperature = 0, top_p = 1):
+    """
+    Calls the OpenAI completion endpoint with specified parameters.
+
+    Args:
+        current_chat (list): The prompt used for the request.
+        max_token (int): The maximum number of tokens in the reply.
+        stop_list (bool, optional): Whether to use specific stop tokens. Defaults to False.
+        max_attempts (int, optional): Maximum number of retries. Defaults to 3.
+        model (str, optional): OpenAI model used for the request. Defaults to 'MODEL_CHAT'.
+        temperature (float, optional): Sampling temperature for the response. A value of 0 means deterministic output. Defaults to 0.
+        top_p (float, optional): Nucleus sampling parameter, with 1 being 'take the best'. Defaults to 1.
+
+    Returns:
+        str: The response text or 'OPEN_AI_ISSUE' if an error occurs (e.g., if OpenAI service is down).
+    """
     stop = stop_list if (stop_list and len(stop_list) < 4) else ""
     attempts = 0
     valid = False
@@ -366,9 +502,9 @@ def request_gpt(current_chat, max_token, stop_list = False, max_attempts = 3, mo
         try:
             response = openai.ChatCompletion.create(
                 messages= current_chat,
-                temperature=0,
+                temperature=temperature,
                 max_tokens= int(max_token),
-                top_p=1,
+                top_p=top_p,
                 frequency_penalty=0,
                 presence_penalty=0,
                 stop=stop,
@@ -378,8 +514,8 @@ def request_gpt(current_chat, max_token, stop_list = False, max_attempts = 3, mo
             rep = rep.strip()
             valid = True
         except Exception as e:
-            print("Issue OAI ",e)
             attempts += 1
+            print(f"Error. This is attempt number {attempts}/{max_attempts}. The exception is {e}. Trying again")
             rep = OPEN_AI_ISSUE
     if rep == OPEN_AI_ISSUE and check_co():
         print("WE HAVE AN ISSUE")
@@ -388,7 +524,7 @@ def request_gpt(current_chat, max_token, stop_list = False, max_attempts = 3, mo
 
 def print_gpt_models():
     '''
-    We need to check from time to time if there is a new gpt model
+    To list the gpt models provided by OpenAI.
     '''
     response = openai.Model.list() # list all models
 
@@ -396,7 +532,7 @@ def print_gpt_models():
         name = elem["id"]
         if "gpt" in name or "embedding" in name: print(name)
 
-def self_affirmation_role(role_chatbot_in_text):
+def self_affirmation_role(role_chatbot_in_text: str) -> str:
     '''
     Function to transform an instruction of the system prompt into a self-affirmation message.
 
