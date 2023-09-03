@@ -443,6 +443,7 @@ def ask_question_gpt(role: str, question: str, model=MODEL_CHAT, max_tokens=4000
         If max_tokens is set to 4000, a print statement will prompt you to adjust it.
     """
     maxi = MAX_TOKEN_CHAT if model==MODEL_CHAT else MAX_TOKEN_GPT4
+    print(maxi)
     if check_length and calculate_token_aproximatively(role) + calculate_token_aproximatively(question) > maxi:
         print("Your input is likely too long for one query. You can use 'new_chunk_text' to chunk the text beforehand.")
         return ""
@@ -597,8 +598,12 @@ def request_gpt(current_chat : list, max_token : int, stop_list = False, max_att
             valid = True
         except Exception as e:
             attempts += 1
-            print(f"Error. This is attempt number {attempts}/{max_attempts}. The exception is {e}. Trying again")
-            rep = OPEN_AI_ISSUE
+            if 'Rate limit reached' in e:
+                print(f"Rate limit reached. We will slow down and sleep for 300ms. This was attempt number {attempts}/{max_attempts}")
+                time.sleep(0.3)
+            else:
+                print(f"Error. This is attempt number {attempts}/{max_attempts}. The exception is {e}. Trying again")
+                rep = OPEN_AI_ISSUE
     if rep == OPEN_AI_ISSUE and check_co():
         print("WE HAVE AN ISSUE")
         log_issue(f"No answer despite {max_attempts} attempts", request_gpt, "Open AI is down")
@@ -654,7 +659,7 @@ def self_affirmation_role(role_chatbot_in_text: str) -> str:
 
 # *************************************************************
 if __name__ == "__main__":
-    pass
+    ask_question_gpt("Hi","What time is it?", MODEL_GPT4)
 
 
 # Testing tiktoken vs aproximation
