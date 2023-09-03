@@ -73,6 +73,63 @@ def format_timestamp(timestamp: str) -> str:
     except ValueError:
         return timestamp
 
+def ensure_valid_date(date_input: Union[datetime.date, str]) -> Union[datetime.date, None]:
+    """
+    Ensures the given possible date is a valid date and returns it.
+    
+    Args:
+        date_input: Date in a datetime or in a string in recognizable formats.
+        
+    Returns:
+        datetime.date: Parsed date object, or None if parsing fails.
+    """
+    if isinstance(date_input, datetime.date,): return date_input
+    elif isinstance(date_input, str):
+        date_formats = ['%Y-%m-%d', '%d-%m-%Y', '%m-%d-%Y', '%Y/%m/%d', '%d/%m/%Y', '%m/%d/%Y'] 
+        for fmt in date_formats:
+            try:
+                return datetime.datetime.strptime(date_input, fmt).date()
+            except ValueError:
+                pass
+        log_issue(ValueError(f"'{date_input}' is not in a recognized date format."), ensure_valid_date)
+        return None
+    else:
+       log_issue((f"Error: The type of date_input is {type(date_input)} which is not str or datetime"), ensure_valid_date)
+       return None
+
+def get_days_from_date(date_input: Union[datetime.date, str], unit: str = 'days') -> Union[int, None]:
+    """
+    Calculate the number of days or years since the provided date.
+    
+    Args:
+        date_input (Union[datetime.date, str]): The date from which to count, 
+            accepted as either a date object or a string in several formats 
+            (e.g., "2022-09-01", "01-09-2022", "09/01/2022").
+        unit (str): Determines the unit of the returned value; accepts "days" or "years". 
+            Defaults to "days".
+            
+    Returns:
+        int: Time passed since the provided date in the specified unit. If the date is invalid or in the future, returns None.
+    """
+    date = ensure_valid_date(date_input)
+    if date is None: return None        
+    today = datetime.date.today()
+    if today < date: return None
+    delta = today - date
+    if unit == 'days': 
+        return delta.days
+    elif unit == 'years':
+        return today.year - date.year - ((today.month, today.day) < (date.month, date.day))
+    else:
+        log_issue(ValueError(f"'{unit}' is not a recognized time unit."), get_days_from_date, f"Invalid time unit: {unit}")
+        return None
+
+def log_issue(exception, function, message):
+    # Your log_issue implementation would be here.
+    # For this example, I'm using a simple print statement.
+    print(f"Error in function {function.__name__}: {exception}. Message: {message}")
+
+
 def generate_unique_integer():
     '''
     Returns a random integer. Should be unique because between 0 and 2*32 -1 but still we can check after.
@@ -547,6 +604,30 @@ def print_gpt_models():
     for elem in response["data"]:
         name = elem["id"]
         if "gpt" in name or "embedding" in name: print(name)
+
+def retry_if_too_short(func, min_char_length=50, max_retries=2, *args, **kwargs):
+    """
+    Retry a given function if its output is too short.
+    
+    Args:
+        func (callable): The function to be called.
+        min_char_length (int, optional): The minimum character length to consider the output valid. Defaults to 50.
+        max_retries (int, optional): The maximum number of times the function should be retried. Defaults to 2.
+        *args: Positional arguments passed to the `func`.
+        **kwargs: Keyword arguments passed to the `func`.
+    
+    Returns:
+        str: The output of the function if it meets the minimum character length criteria.
+        None: If the function output does not meet the criteria after all retries.
+    """
+    #MAX_RETRIES = kwargs.pop("max_retries", 2)
+    #MIN_CHAR_LENGTH = kwargs.pop("min_char_length", 50)
+    
+    for _ in range(max_retries):
+        result = func(*args, **kwargs)
+        if result and len(result) >= min_char_length:
+            return result
+    return None
 
 def self_affirmation_role(role_chatbot_in_text: str) -> str:
     '''
