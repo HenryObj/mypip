@@ -28,7 +28,11 @@ OAI_KEY = os.getenv("OAI_API_KEY")
 openai.api_key = OAI_KEY
 
 MODEL_CHAT = r"gpt-3.5-turbo"
+MAX_TOKEN_CHAT = 4097 # Max is 4,097 tokens
+
 MODEL_GPT4 = r"gpt-4"
+MAX_TOKEN_GPT4 = 8192 
+
 OPEN_AI_ISSUE = r"%$144$%" # When OpenAI is down
 MODEL_EMB = r"text-embedding-ada-002"
 
@@ -438,13 +442,14 @@ def ask_question_gpt(role: str, question: str, model=MODEL_CHAT, max_tokens=4000
     Note:
         If max_tokens is set to 4000, a print statement will prompt you to adjust it.
     """
-    if check_length and calculate_token_aproximatively(role) + calculate_token_aproximatively(question) > 5000:
+    maxi = MAX_TOKEN_CHAT if model==MODEL_CHAT else MAX_TOKEN_GPT4
+    if check_length and calculate_token_aproximatively(role) + calculate_token_aproximatively(question) > maxi:
         print("Your input is likely too long for one query. You can use 'new_chunk_text' to chunk the text beforehand.")
         return ""
     current_chat = initialize_role_in_chatTable(role)
     current_chat = add_content_to_chatTable(question, "user", current_chat)
     if max_tokens == 4000:
-        print(f"You are querying GPT with a maximum response length of about 3000 words for the question: {question}")
+        print(f"Warning: You are querying {model} with the default maximum response length of about 3000 words.\nIf you don't need that much, it will be faster and cheaper to adjust the max_token.")
     return request_gpt(current_chat, max_token=max_tokens, model=model)
 
 
@@ -609,23 +614,25 @@ def print_gpt_models():
         name = elem["id"]
         if "gpt" in name or "embedding" in name: print(name)
 
-def retry_if_too_short(func, min_char_length=50, max_retries=2, *args, **kwargs):
+def retry_if_too_short(func, *args, **kwargs):
     """
     Retry a given function if its output is too short.
     
     Args:
         func (callable): The function to be called.
-        min_char_length (int, optional): The minimum character length to consider the output valid. Defaults to 50.
-        max_retries (int, optional): The maximum number of times the function should be retried. Defaults to 2.
         *args: Positional arguments passed to the `func`.
         **kwargs: Keyword arguments passed to the `func`.
+
+        OPTIONAL - you can pass 'min_char_length' and 'max_retries' as parameters.
+        min_char_length is the minimum character length to consider the output valid. Defaults to 50.
+        max_retries is the minimum the maximum number of times the function should be retried. Defaults to 2.
     
     Returns:
         str: The output of the function if it meets the minimum character length criteria.
         None: If the function output does not meet the criteria after all retries.
     """
-    #MAX_RETRIES = kwargs.pop("max_retries", 2)
-    #MIN_CHAR_LENGTH = kwargs.pop("min_char_length", 50)
+    max_retries = kwargs.pop("max_retries", 2)
+    min_char_length = kwargs.pop("min_char_length", 50)
     
     for _ in range(max_retries):
         result = func(*args, **kwargs)
@@ -644,8 +651,6 @@ def self_affirmation_role(role_chatbot_in_text: str) -> str:
     clean_text = clean_text.replace("You ", "I ").replace(" you ", " I ").replace(" You ", " I ")
     clean_text = clean_text.replace("Your ", "My ").replace(" your ", " my ").replace(" Your ", " My ")
     return clean_text
-
-
 
 # *************************************************************
 if __name__ == "__main__":
