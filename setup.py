@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="henryobj",
-    version="0.1.6", # need to increment this everytime otherwise Pypi will not accept the new version
+    version="0.1.7", # need to increment this everytime otherwise Pypi will not accept the new version
      url='https://github.com/HenryObj/mypip',
     packages=find_packages(),
     install_requires=[

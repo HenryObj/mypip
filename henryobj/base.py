@@ -55,80 +55,10 @@ def is_json(myjson: str) -> bool:
     return False
   return True
 
-def format_datetime(datetime):
-    '''
-    Takes a Datetime as an input and returns a string in the format "10-Jan-2022"
-    '''
-    return datetime.strftime('%d-%b-%Y')
-
-def format_timestamp(timestamp: str) -> str:
-    '''
-    Converts a timestamp string to a "10-Jan-2022" format.
-    
-    Returns original timestamp if parsing fails.
-    '''
-    try:
-        dt = datetime.datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S')
-        return format_datetime(dt)
-    except ValueError:
-        return timestamp
-
-def ensure_valid_date(date_input: Union[datetime.date, str]) -> Union[datetime.date, None]:
-    """
-    Ensures the given possible date is a valid date and returns it.
-    
-    Args:
-        date_input: Date in a datetime or in a string in recognizable formats.
-        
-    Returns:
-        datetime.date: Parsed date object, or None if parsing fails.
-    """
-    if isinstance(date_input, datetime.date,): return date_input
-    elif isinstance(date_input, str):
-        date_formats = ['%Y-%m-%d', '%d-%m-%Y', '%m-%d-%Y', '%Y/%m/%d', '%d/%m/%Y', '%m/%d/%Y'] 
-        for fmt in date_formats:
-            try:
-                return datetime.datetime.strptime(date_input, fmt).date()
-            except ValueError:
-                pass
-        log_issue(ValueError(f"'{date_input}' is not in a recognized date format."), ensure_valid_date)
-        return None
-    else:
-       log_issue((f"Error: The type of date_input is {type(date_input)} which is not str or datetime"), ensure_valid_date)
-       return None
-
-def get_days_from_date(date_input: Union[datetime.date, str], unit: str = 'days') -> Union[int, None]:
-    """
-    Calculate the number of days or years since the provided date.
-    
-    Args:
-        date_input (Union[datetime.date, str]): The date from which to count, 
-            accepted as either a date object or a string in several formats 
-            (e.g., "2022-09-01", "01-09-2022", "09/01/2022").
-        unit (str): Determines the unit of the returned value; accepts "days" or "years". 
-            Defaults to "days".
-            
-    Returns:
-        int: Time passed since the provided date in the specified unit. If the date is invalid or in the future, returns None.
-    """
-    date = ensure_valid_date(date_input)
-    if date is None: return None        
-    today = datetime.date.today()
-    if today < date: return None
-    delta = today - date
-    if unit == 'days': 
-        return delta.days
-    elif unit == 'years':
-        return today.year - date.year - ((today.month, today.day) < (date.month, date.day))
-    else:
-        log_issue(ValueError(f"'{unit}' is not a recognized time unit."), get_days_from_date, f"Invalid time unit: {unit}")
-        return None
-
 def log_issue(exception, function, message):
     # Your log_issue implementation would be here.
     # For this example, I'm using a simple print statement.
     print(f"Error in function {function.__name__}: {exception}. Message: {message}")
-
 
 def generate_unique_integer():
     '''
@@ -154,14 +84,6 @@ def get_module_name(func: Callable[..., Any]) -> str:
         return ''
     else:
         return module.__name__.split('.')[-1]
-
-def get_now(exact: bool = False) -> str:
-    '''
-    Small function to get the timestamp in string format.
-    By default we return the following format: "10_Jan_2023" but if exact is True, we will return 10_Jan_2023_@15h23s33
-    '''
-    now = datetime.datetime.now()
-    return datetime.datetime.strftime(now, "%d_%b_%Y@%Hh%Ms%S") if exact else datetime.datetime.strftime(now, "%d_%b_%Y")
 
 def log_issue(exception: Exception, func: Callable[..., Any], additional_info: str = "") -> None:
     '''
@@ -337,6 +259,88 @@ def sanitize_text(text : str) -> str:
     return text
 
 # *************************************************************************************************
+# ************************************* Date & Time related ***************************************
+# *************************************************************************************************
+
+def ensure_valid_date(date_input: Union[datetime.date, str]) -> Union[datetime.date, None]:
+    """
+    Ensures the given possible date is a valid date and returns it.
+    
+    Args:
+        date_input: Date in a datetime or in a string in recognizable formats.
+        
+    Returns:
+        datetime.date: Parsed date object, or None if parsing fails.
+    """
+    if isinstance(date_input, datetime.date,): return date_input
+    elif isinstance(date_input, str):
+        date_formats = ['%Y-%m-%d', '%d-%m-%Y', '%m-%d-%Y', '%Y/%m/%d', '%d/%m/%Y', '%m/%d/%Y'] 
+        for fmt in date_formats:
+            try:
+                return datetime.datetime.strptime(date_input, fmt).date()
+            except ValueError:
+                pass
+        log_issue(ValueError(f"'{date_input}' is not in a recognized date format."), ensure_valid_date)
+        return None
+    else:
+       log_issue((f"Error: The type of date_input is {type(date_input)} which is not str or datetime"), ensure_valid_date)
+       return None
+
+def format_datetime(datetime):
+    '''
+    Takes a Datetime as an input and returns a string in the format "10-Jan-2022"
+    '''
+    return datetime.strftime('%d-%b-%Y')
+
+def format_timestamp(timestamp: str) -> str:
+    '''
+    Converts a timestamp string to a "10-Jan-2022" format.
+    
+    Returns original timestamp if parsing fails.
+    '''
+    try:
+        dt = datetime.datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S')
+        return format_datetime(dt)
+    except ValueError:
+        return timestamp
+
+def get_days_from_date(date_input: Union[datetime.date, str], unit: str = 'days') -> Union[int, None]:
+    """
+    Calculate the number of days or years since the provided date.
+    
+    Args:
+        date_input (Union[datetime.date, str]): The date from which to count, 
+            accepted as either a date object or a string in several formats 
+            (e.g., "2022-09-01", "01-09-2022", "09/01/2022").
+        unit (str): Determines the unit of the returned value; accepts "days" or "years". 
+            Defaults to "days".
+            
+    Returns:
+        int: Time passed since the provided date in the specified unit. If the date is invalid or in the future, returns None.
+    """
+    date = ensure_valid_date(date_input)
+    if date is None: return None        
+    today = datetime.date.today()
+    if today < date: return None
+    delta = today - date
+    if unit == 'days': 
+        return delta.days
+    elif unit == 'years':
+        return today.year - date.year - ((today.month, today.day) < (date.month, date.day))
+    else:
+        log_issue(ValueError(f"'{unit}' is not a recognized time unit."), get_days_from_date, f"Invalid time unit: {unit}")
+        return None
+
+def get_now(exact: bool = False) -> str:
+    '''
+    Small function to get the timestamp in string format.
+    By default we return the following format: "10_Jan_2023" but if exact is True, we will return 10_Jan_2023_@15h23s33
+    '''
+    now = datetime.datetime.now()
+    return datetime.datetime.strftime(now, "%d_%b_%Y@%Hh%Ms%S") if exact else datetime.datetime.strftime(now, "%d_%b_%Y")
+
+
+# *************************************************************************************************
 # *************************************** Internet Related ****************************************
 # *************************************************************************************************
 
@@ -435,7 +439,7 @@ def ask_question_gpt(role: str, question: str, model=MODEL_CHAT, max_tokens=4000
         If max_tokens is set to 4000, a print statement will prompt you to adjust it.
     """
     if check_length and calculate_token_aproximatively(role) + calculate_token_aproximatively(question) > 5000:
-        print("Your input is likely too long for one query. You can use 'new_chunk_text' for that")
+        print("Your input is likely too long for one query. You can use 'new_chunk_text' to chunk the text beforehand.")
         return ""
     current_chat = initialize_role_in_chatTable(role)
     current_chat = add_content_to_chatTable(question, "user", current_chat)
@@ -640,6 +644,8 @@ def self_affirmation_role(role_chatbot_in_text: str) -> str:
     clean_text = clean_text.replace("You ", "I ").replace(" you ", " I ").replace(" You ", " I ")
     clean_text = clean_text.replace("Your ", "My ").replace(" your ", " my ").replace(" Your ", " My ")
     return clean_text
+
+
 
 # *************************************************************
 if __name__ == "__main__":
