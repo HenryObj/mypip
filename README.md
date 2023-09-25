@@ -3,11 +3,9 @@
 
 This module is to simplify the access to my utility functions. Feel free to use it and suggest improvements 🤝
 
-## Last Update - 3rd of September 2023
-
+## Last Update - 25th of September 2023
 
 ## What is in this package?
-
 The codebase is separated in 4 main sections:
     1. General utilities functions
     2. Date & Time related functions

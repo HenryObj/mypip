@@ -28,10 +28,15 @@ OAI_KEY = os.getenv("OAI_API_KEY")
 openai.api_key = OAI_KEY
 
 MODEL_CHAT = r"gpt-3.5-turbo"
+MODEL_INSTRUCT = r"gpt-3.5-turbo-instruct"
+MODEL_CHAT_LATEST = r"gpt-3.5-turbo-0613"
+
 MAX_TOKEN_CHAT = 4097 # Max is 4,097 tokens
 
 MODEL_GPT4 = r"gpt-4"
-MAX_TOKEN_GPT4 = 8192 
+MODEL_GPT4_LATEST = r"gpt-4-0613"
+
+MAX_TOKEN_GPT4 = 8192 # For some reason (03/09/23) an input above 4097 failed so I guess this is for the response? 
 
 OPEN_AI_ISSUE = r"%$144$%" # When OpenAI is down
 MODEL_EMB = r"text-embedding-ada-002"
@@ -435,15 +440,14 @@ def ask_question_gpt(role: str, question: str, model=MODEL_CHAT, max_tokens=4000
         question (str): The question to ask the model.
         model (str, optional): The model to use. Defaults to the chat model 3.5 turbo.
         max_tokens (int, optional): Maximum number of tokens for the reply. Defaults to 4000.
-        check_length (bool, optional): Will perform an aproximate check on the length of the input not to query GPT if too long.
+        check_length (bool, optional): Will perform an aproximate check on the length of the input not to query GPT if too long. For now, we limit to 4K only.
     Returns:
         str: The model's reply to the question.
 
     Note:
         If max_tokens is set to 4000, a print statement will prompt you to adjust it.
     """
-    maxi = MAX_TOKEN_CHAT if model==MODEL_CHAT else MAX_TOKEN_GPT4
-    print(maxi)
+    if model == MODEL_CHAT or model == MODEL_GPT4: maxi = 4000
     if check_length and calculate_token_aproximatively(role) + calculate_token_aproximatively(question) > maxi:
         print("Your input is likely too long for one query. You can use 'new_chunk_text' to chunk the text beforehand.")
         return ""
@@ -659,7 +663,7 @@ def self_affirmation_role(role_chatbot_in_text: str) -> str:
 
 # *************************************************************
 if __name__ == "__main__":
-    ask_question_gpt("Hi","What time is it?", MODEL_GPT4)
+    pass
 
 
 # Testing tiktoken vs aproximation
