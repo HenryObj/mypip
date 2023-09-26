@@ -431,14 +431,44 @@ def add_content_to_chatTable(content: str, role: str, chatTable: List[Dict[str, 
             chatTable.append({"role":"assistant", "content": f"{content}"})
         return chatTable
 
-def ask_question_gpt(role: str, question: str, model=MODEL_CHAT, max_tokens=4000, check_length=True) -> str:
+def ask_question_gpt(question: str, role ="", max_tokens=4000, check_length=True) -> str:
     """
-    Queries ChatGPT with a specific question.
+    Queries OpenAI Instruct Model with a specific question. This has a better performance than getting a chat completion.
+
+    Args:
+        question (str): The question to ask the model.
+        role (str, optional): As the legacy method would initialize a role, you can use previously defined role which will be part of the prompt.
+        max_tokens (int, optional): Maximum number of tokens for the reply.
+        check_length (bool, optional): Will perform an aproximate check on the length of the input not to query if too heavy. For now, we limit to 4K.
+    Returns:
+        str: The model's reply to the question.
+
+    Note:
+        If max_tokens is set to 4000, a print statement will prompt you to adjust it.
+    """
+    if check_length and calculate_token_aproximatively(role) + calculate_token_aproximatively(question) > 4000:
+        print("Your input is likely too long for one query. You can use 'new_chunk_text' to chunk the text beforehand.")
+        return ""
+    if max_tokens == 4000:
+        print(f"\nWarning: You are using default maximum response length of about 3000 words.\nIf you don't need that much, it will be faster and cheaper to adjust the max_token.\n\n")
+    if role == "": instructions = question
+    else:
+        instructions = f"""You must follow strictly the Role to answer the Question.
+        \nRole = {role}
+        \n
+        Question = {question}
+        \nMake sure you take your time to understand the Role and follow the Role before answering the Question. Important: Answer ONLY the Question and nothing else.
+        """
+    return request_gpt_instruct(instructions=instructions, max_tokens=max_tokens)
+
+def ask_question_gpt4(role: str, question: str, model=MODEL_GPT4, max_tokens=4000, check_length=True) -> str:
+    """
+    Queries Chat GPT 4 with a specific question.
 
     Args:
         role (str): The system prompt to be initialized in the chat table. How you want ChatGPT to behave.
         question (str): The question to ask the model.
-        model (str, optional): The model to use. Defaults to the chat model 3.5 turbo.
+        model (str, optional): The model to use. Defaults to GPT4.
         max_tokens (int, optional): Maximum number of tokens for the reply. Defaults to 4000.
         check_length (bool, optional): Will perform an aproximate check on the length of the input not to query GPT if too long. For now, we limit to 4K only.
     Returns:
@@ -447,16 +477,15 @@ def ask_question_gpt(role: str, question: str, model=MODEL_CHAT, max_tokens=4000
     Note:
         If max_tokens is set to 4000, a print statement will prompt you to adjust it.
     """
-    if model == MODEL_CHAT or model == MODEL_GPT4: maxi = 4000
+    if model in [MODEL_CHAT, MODEL_GPT4]: maxi = 4000
     if check_length and calculate_token_aproximatively(role) + calculate_token_aproximatively(question) > maxi:
         print("Your input is likely too long for one query. You can use 'new_chunk_text' to chunk the text beforehand.")
         return ""
     current_chat = initialize_role_in_chatTable(role)
     current_chat = add_content_to_chatTable(question, "user", current_chat)
     if max_tokens == 4000:
-        print(f"Warning: You are querying {model} with the default maximum response length of about 3000 words.\nIf you don't need that much, it will be faster and cheaper to adjust the max_token.")
+        print(f"\nWarning: You are querying {model} with the default response length of about 3000 words.\nIf you don't need that much, it will be faster and cheaper to adjust the max_token.\n\n")
     return request_gpt(current_chat, max_token=max_tokens, model=model)
-
 
 def calculate_token(text: str) -> int:
     """
@@ -609,7 +638,49 @@ def request_gpt(current_chat : list, max_token : int, stop_list = False, max_att
                 print(f"Error. This is attempt number {attempts}/{max_attempts}. The exception is {e}. Trying again")
                 rep = OPEN_AI_ISSUE
     if rep == OPEN_AI_ISSUE and check_co():
-        print("WE HAVE AN ISSUE")
+        print(f" ** We have an issue with Open AI using the model {model}")
+        log_issue(f"No answer despite {max_attempts} attempts", request_gpt, "Open AI is down")
+    return rep
+
+def request_gpt_instruct(instructions : str, max_tokens = 300, max_attempts = 3, temperature = 0, top_p = 1) -> str:
+    '''
+    Calls the OpenAI completion endpoint with specified parameters.
+
+    Args:
+        instructions (str): The prompt used for the request.
+        max_token (int): The maximum number of tokens in the reply - defaulted to 300 (200 words)
+        max_attempts (int, optional): Maximum number of retries. Defaults to 3.
+        temperature (float, optional): Sampling temperature for the response. A value of 0 means deterministic output. Defaults to 0.
+        top_p (float, optional): Nucleus sampling parameter, with 1 being 'take the best'. Defaults to 1.
+
+    Returns:
+        str: The response text or 'OPEN_AI_ISSUE' if an error occurs (e.g., if OpenAI service is down).
+    '''
+    attempts = 0
+    valid = False
+    while attempts < max_attempts and not valid:
+        try:
+            rep = openai.Completion.create(
+                    model = MODEL_INSTRUCT,
+                    prompt = instructions,
+                    temperature = 0,
+                    max_tokens = max_tokens,
+                    top_p =1,
+                    frequency_penalty=0,
+                    presence_penalty=0
+                )
+            rep = rep["choices"][0]["text"].strip()
+            valid = True
+        except Exception as e:
+            attempts += 1
+            if 'Rate limit reached' in e:
+                print(f"Rate limit reached. We will slow down and sleep for 300ms. This was attempt number {attempts}/{max_attempts}")
+                time.sleep(0.3)
+            else:
+                print(f"Error. This is attempt number {attempts}/{max_attempts}. The exception is {e}. Trying again")
+                rep = OPEN_AI_ISSUE
+    if rep == OPEN_AI_ISSUE and check_co():
+        print(f" ** We have an issue with Open AI using the model {MODEL_INSTRUCT}")
         log_issue(f"No answer despite {max_attempts} attempts", request_gpt, "Open AI is down")
     return rep
 
@@ -663,8 +734,21 @@ def self_affirmation_role(role_chatbot_in_text: str) -> str:
 
 # *************************************************************
 if __name__ == "__main__":
+    #print(ask_question_gpt("What is the meaning of life? Give a long answer with references."))
     pass
 
+# Testing chat completion vs instruct:
+# Huge improvement (7sc vs 1sc) for instruct on the question side
+"""
+    start = time.time()
+    y = ask_question_gpt("You are an intelligent assistant", "What is the meaning of life", max_tokens=300)
+    one = time.time()
+    x = request_gpt_instruct("What is the meaning of life?")
+    end = time.time()
+    print(f"One is {one - start} sc // Two is {end - one}")
+    print(f"Chat {y} \n\n")
+    print("Instruct", x)
+"""
 
 # Testing tiktoken vs aproximation
 """
