@@ -438,28 +438,30 @@ def add_content_to_chatTable(content: str, role: str, chatTable: List[Dict[str, 
             chatTable.append({"role":"assistant", "content": f"{content}"})
         return chatTable
 
-def ask_question_gpt(question: str, role ="", max_tokens=4000, check_length=True) -> str:
+def ask_question_gpt(question: str, role ="", max_tokens=1000) -> str:
     """
     Queries OpenAI Instruct Model with a specific question. This has a better performance than getting a chat completion.
 
     Args:
         question (str): The question to ask the model.
         role (str, optional): As the legacy method would initialize a role, you can use previously defined role which will be part of the prompt.
-        max_tokens (int, optional): Maximum number of tokens to be used in general
+        max_tokens (int, optional): Maximum number of tokens to be for the completion - Knowing that total cannot exceed 4097
         check_length (bool, optional): Will perform an aproximate check on the length of the input not to query if too heavy. For now, we limit to 4K.
     Returns:
         str: The model's reply to the question.
 
     Note:
-        If max_tokens is left to 4000, a print statement will prompt you to adjust it.
+        If max_tokens is left to 1000, a print statement will recommand you to adjust it.
     """
     initial_token_usage = calculate_token(role) + calculate_token(question)
-    if check_length and initial_token_usage > max_tokens:
-        print("Your input is too large for the query. Increase the max_tokens or use 'new_chunk_text' to chunk the text beforehand.")
+    if initial_token_usage > MAX_TOKEN_CHAT_INSTRUCT:
+        print("Your input is too large for the query. Use'new_chunk_text' to chunk the text beforehand.")
         return ""
-    if max_tokens == 4000:
-        print(f"""\nWarning: You are using default maximum response length of about 3000 words.\nIf you don't need that much, it will be faster and cheaper to adjust the max_token.\n
-              You are using {initial_token_usage} tokens with the question. For example: if you want an answer of 300 words, put max_token to aprx. {440+initial_token_usage}\n\n
+    if initial_token_usage + max_tokens > MAX_TOKEN_CHAT_INSTRUCT:
+        print(f"Your input + the requested tokens for the answer exceed the maximum amount of 4097.\n Please adjust the max_tokens to a MAXIMUM of {4000-initial_token_usage}")
+        return ""
+    if max_tokens == 1000:
+        print(f"""\nWarning: You are using default max_tokens.\n Your default response length is 750 words.\nIf you don't need that much, it will be faster and cheaper to reduce the max_token.\n
               """)
         max_request = max_tokens - initial_token_usage
     else:
@@ -474,7 +476,7 @@ def ask_question_gpt(question: str, role ="", max_tokens=4000, check_length=True
         """
     return request_gpt_instruct(instructions=instructions, max_tokens=max_request)
 
-def ask_question_gpt4(role: str, question: str, model=MODEL_GPT4, max_tokens=8000, check_length=True) -> str:
+def ask_question_gpt4(role: str, question: str, model=MODEL_GPT4, max_tokens=2000) -> str:
     """
     Queries Chat GPT 4 with a specific question. 
 
@@ -482,32 +484,29 @@ def ask_question_gpt4(role: str, question: str, model=MODEL_GPT4, max_tokens=800
         role (str): The system prompt to be initialized in the chat table. How you want ChatGPT to behave.
         question (str): The question to ask the model.
         model (str, optional): The model to use. Defaults to GPT4. Althought it says GPT4, you can use the ChatModel
-        max_tokens (int, optional): Maximum number of tokens for the context. Default is 8000 which is huge.
+        max_tokens (int, optional): Maximum number of tokens for the answer. Default is 3000 which is huge.
         check_length (bool, optional): Will perform an aproximate check on the length of the input not to query GPT if too long. For now, we limit to 4K only.
     Returns:
         str: The model's reply to the question.
 
     Note:
-        If max_tokens is set to 8000, a print statement will prompt you to adjust it.
+        If max_tokens is set to 3000, a print statement will prompt you to adjust it.
     """
-    maxi = 8192 if model == MODEL_CHAT else 4097
+    maxi = 8192 if model == MODEL_GPT4 else 4097
     initial_token_usage = calculate_token(role) + calculate_token(question)
-    if check_length and calculate_token(role) + calculate_token(question) > maxi:
-        print("Your input is too large for the query. Increase the max_tokens or use 'new_chunk_text' to chunk the text beforehand.")
+
+    if initial_token_usage > maxi:
+        print("Your input is too large for the query. Use'new_chunk_text' to chunk the text beforehand.")
         return ""
+    if initial_token_usage + max_tokens > maxi:
+        print(f"Your input + the requested tokens for the answer exceed the maximum amount of 4097.\n Please adjust the max_tokens to a MAXIMUM of {8000-initial_token_usage}")
+        return ""
+    if max_tokens == 2000:
+        print(f"""\nWarning: You are using default max_tokens.\n Your default response length is 1500 words.\nIf you don't need that much, it will be faster and cheaper to reduce the max_token.\n
+              """)
     current_chat = initialize_role_in_chatTable(role)
     current_chat = add_content_to_chatTable(question, "user", current_chat)
-    if max_tokens > 4000 and model == MODEL_CHAT:
-        print("The Chat Model has a maximum context of 4097 token. Please adjust the max_token to a value below that.")
-        return ""
-    if max_tokens == 8000:
-        print(f"""\nWarning: You are using default maximum response length of about 3000 words.\nIf you don't need that much, it will be faster and cheaper to adjust the max_token.\n
-              You are using {initial_token_usage} tokens with the question. For example: if you want an answer of 300 words, put max_token to aprx. {440+initial_token_usage}\n\n
-              """)
-        max_request = max_tokens - initial_token_usage
-    else:
-        max_request = max_tokens
-    return request_chatgpt(current_chat, max_token=max_request, model=model)
+    return request_chatgpt(current_chat, max_token=max_tokens, model=model)
 
 def calculate_token(text: str) -> int:
     """
