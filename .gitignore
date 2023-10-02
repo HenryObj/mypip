@@ -6,3 +6,4 @@ dist/
 henryobj.egg-info/
 helper.md
 update.sh
+henryobj/__pycache__/

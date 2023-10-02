@@ -69,6 +69,13 @@ def custom_round(num: float, threshold: float = 0.1) -> int:
     decimal_part = num % 1  # Get the decimal part more efficiently
     return int(num) + (decimal_part >= threshold)
 
+def find_sentence_boundary(chunk : str, desired_end : int) -> int:
+    '''
+    Simple function to find the last possible sentence boundary. Returns the position of this character or the length of the text if nothing is found.
+    '''
+    for punct in ('. ', '.', '!', ';'):
+        pos = chunk[:desired_end].rfind(punct)
+    return len(chunk) if pos == -1 else pos
 
 def is_json(myjson: str) -> bool:
   '''
@@ -142,59 +149,35 @@ def lprint(*args: Any):
 
 def new_chunk_text(text: str, target_token: int = 200) -> List[str]:
     '''
-    New function to chunk the text in better blocks.
-    The idea is to pass several times and make the ideal blocks first (rather than one time targetting the ideal token) then breaking the long ones.
-    target_token will be used to make chunks that get close to this size. Returns the chunk_oai if issue.
+    Much simpler function to chunk the text in blocks by spliting by sentence. The last chunk might be small.
     '''
-    def find_sentence_boundary(chunk, desired_end):
-        for punct in ('. ', '.', '!', ';'):
-            pos = chunk[:desired_end].rfind(punct)
-            return pos
-    y = calculate_token(text) 
-    print(f"{y} for a target of {target_token} - logically we should get about {custom_round(y/target_token)} chunks")
-    if calculate_token_aproximatively(text) < 1.1 * target_token:
+    tok_text = calculate_token(text)
+    if tok_text < 1.1 * target_token:
         return [text]
-    try:
-        paragraphs = [p.strip() for p in text.split('\n') if p.strip()]
-        merged_chunks = []
-        i = 0
-        while i < len(paragraphs):
-            current_token_count = calculate_token_aproximatively(paragraphs[i])
-            merged_chunks.append(paragraphs[i])
-            if current_token_count > target_token * 1:
-                i += 1
-            else:
-                # So the chunk is smaller than the target token
-                if i < len(paragraphs)-1:
-                    j = i+1
-                    current_merged_chunk = paragraphs[i]
-                    while j < len(paragraphs) and calculate_token_aproximatively(current_merged_chunk + paragraphs[j]) < 1.1 * target_token:
-                        current_merged_chunk += paragraphs[j]
-                        j += 1
-                    i = j
-                    merged_chunks.append(current_merged_chunk)
-        # As we might have initial chunks that are over 40% larger than the target token          
-        final_chunks = []
-        for chunk in merged_chunks:
-            chunk_token_count = calculate_token_aproximatively(chunk)
-            if chunk_token_count > target_token * 1.4:
-                desired_end = target_token * 1.1
-                remaining_tokens = chunk_token_count
-                while remaining_tokens > target_token:
-                    cut_pos = find_sentence_boundary(chunk, desired_end)
-                    final_chunks.append(chunk[:cut_pos])
-                    chunk = chunk[cut_pos:]
-                    remaining_tokens = calculate_token_aproximatively(chunk)
-                if chunk:
-                    final_chunks.append(chunk)
-            else:
-                final_chunks.append(chunk)
-        return final_chunks
-    except Exception as e:
-        log_issue(e, new_chunk_text)
-        print(" TEXT WAS NOT CHUNKED ")
-        return text
-        # We could have a back up function here
+    print(f"We need to chunk the text.\nCurrent tokens ~ {tok_text}. Target ~ {target_token}.\nLogically we should get about {custom_round(tok_text/target_token)} chunks")
+    sentences = split_into_sentences(text)
+    final_chunks = []
+    current_chunk = ""
+    current_token_count = 0
+
+    for sentence in sentences:
+        sentence_tok = calculate_token_aproximatively(sentence)
+        new_token_count =  current_token_count + sentence_tok
+        
+        # If adding this "sentence" doesn't exceed the limit, add it to the current chunk.
+        if current_token_count <= target_token * 1.05:
+            current_chunk += sentence + " "
+            current_token_count = new_token_count
+
+        # If it does exceed the limit, finalize the current chunk and start a new one keeping the sentence.
+        else:
+            final_chunks.append(current_chunk.strip())
+            current_chunk = sentence + " "
+            current_token_count = sentence_tok
+
+    if current_chunk.strip():
+        final_chunks.append(current_chunk.strip())
+    return final_chunks
 
 def perf(function: Callable[..., Any]):
     '''
@@ -284,6 +267,12 @@ def sanitize_text(text : str) -> str:
     text = re.sub("<[^>]*>", "", text) # Remove HTML tags
     text = " ".join(text.split()) # Replace multiple consecutive spaces with a single space
     return text
+
+def split_into_sentences(text: str) -> List[str]:
+    '''
+    Break down a text into sentences based on sentence boundaries.
+    '''
+    return re.split(r'(?<=[.!?;])\s+|\n', text)
 
 # *************************************************************************************************
 # ************************************* Date & Time related ***************************************
