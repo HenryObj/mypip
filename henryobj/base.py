@@ -62,6 +62,14 @@ def correct_spaces_in_text(text):
     '''
     return re.sub(r"([\.,\?!;])\s*(\S)", r"\1 \2", text)
 
+def custom_round(num: float, threshold: float = 0.1) -> int:
+    """
+    Custom rounding function based on a user-defined threshold.
+    """
+    decimal_part = num % 1  # Get the decimal part more efficiently
+    return int(num) + (decimal_part >= threshold)
+
+
 def is_json(myjson: str) -> bool:
   '''
   Returns True if the input is in json format. False otherwise.
@@ -138,47 +146,41 @@ def new_chunk_text(text: str, target_token: int = 200) -> List[str]:
     The idea is to pass several times and make the ideal blocks first (rather than one time targetting the ideal token) then breaking the long ones.
     target_token will be used to make chunks that get close to this size. Returns the chunk_oai if issue.
     '''
-    def find_sentence_boundary(chunk, end, buffer_char):
+    def find_sentence_boundary(chunk, desired_end):
         for punct in ('. ', '.', '!', ';'):
-            pos = chunk[:end].rfind(punct)
-            if pos != -1 and end - pos < buffer_char:
-                return pos + len(punct), "best"
-        return end, "worst"
+            pos = chunk[:desired_end].rfind(punct)
+            return pos
+    y = calculate_token(text) 
+    print(f"{y} for a target of {target_token} - logically we should get about {custom_round(int(y/target_token))} chunks")
     if calculate_token_aproximatively(text) < 1.1 * target_token:
         return [text]
     try:
         paragraphs = [p.strip() for p in text.split('\n') if p.strip()]
-        buffer_char = 40 * 4
         merged_chunks = []
         i = 0
         while i < len(paragraphs):
             current_token_count = calculate_token_aproximatively(paragraphs[i])
-            if current_token_count < target_token * 0.5:
-                if i == 0:
-                    merged_chunks.append(paragraphs[0] + ' ' + paragraphs[1])
-                    i = 2
-                elif i == len(paragraphs) - 1:
-                    merged_chunks[-1] += ' ' + paragraphs[i]
-                    break
-                else:
-                    if calculate_token_aproximatively(paragraphs[i-1]) < calculate_token_aproximatively(paragraphs[i+1]):
-                        merged_chunks[-1] += ' ' + paragraphs[i]
-                        i += 1
-                    else:
-                        merged_chunks.append(paragraphs[i] + ' ' + paragraphs[i+1])
-                        i += 2
-            else:
-                merged_chunks.append(paragraphs[i])
+            merged_chunks.append(paragraphs[i])
+            if current_token_count > target_token * 1:
                 i += 1
-
+            else:
+                # So the chunk is smaller than the target token
+                if i < len(paragraphs)-1:
+                    j = i+1
+                    current_merged_chunk = paragraphs[i]
+                    while j < len(paragraphs) and calculate_token_aproximatively(current_merged_chunk + paragraphs[j]) < 1.1 * target_token:
+                        current_merged_chunk += paragraphs[j]
+                        j += 1
+                    i = j
+        # As we might have initial chunks that are over 40% larger than the target token          
         final_chunks = []
         for chunk in merged_chunks:
             chunk_token_count = calculate_token_aproximatively(chunk)
-            if chunk_token_count > target_token * 1.5:
-                end = target_token * 4
+            if chunk_token_count > target_token * 1.4:
+                desired_end = target_token * 1.1
                 remaining_tokens = chunk_token_count
                 while remaining_tokens > target_token:
-                    cut_pos, grade = find_sentence_boundary(chunk, end, buffer_char)
+                    cut_pos = find_sentence_boundary(chunk, desired_end)
                     final_chunks.append(chunk[:cut_pos])
                     chunk = chunk[cut_pos:]
                     remaining_tokens = calculate_token_aproximatively(chunk)
@@ -189,7 +191,8 @@ def new_chunk_text(text: str, target_token: int = 200) -> List[str]:
         return final_chunks
     except Exception as e:
         log_issue(e, new_chunk_text)
-        return ""
+        print(" TEXT WAS NOT CHUNKED ")
+        return text
         # We could have a back up function here
 
 def perf(function: Callable[..., Any]):
