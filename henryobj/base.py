@@ -151,7 +151,7 @@ def new_chunk_text(text: str, target_token: int = 200) -> List[str]:
             pos = chunk[:desired_end].rfind(punct)
             return pos
     y = calculate_token(text) 
-    print(f"{y} for a target of {target_token} - logically we should get about {custom_round(int(y/target_token))} chunks")
+    print(f"{y} for a target of {target_token} - logically we should get about {custom_round(y/target_token)} chunks")
     if calculate_token_aproximatively(text) < 1.1 * target_token:
         return [text]
     try:
@@ -172,6 +172,7 @@ def new_chunk_text(text: str, target_token: int = 200) -> List[str]:
                         current_merged_chunk += paragraphs[j]
                         j += 1
                     i = j
+                    merged_chunks.append(current_merged_chunk)
         # As we might have initial chunks that are over 40% larger than the target token          
         final_chunks = []
         for chunk in merged_chunks:
