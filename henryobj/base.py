@@ -21,6 +21,7 @@ import re
 import time
 from urllib.parse import urlparse, urlunparse, quote, unquote
 import random
+from collections import Counter
 
 # ****** PATHS & GLOBAL VARIABLES *******
 
@@ -61,6 +62,19 @@ def correct_spaces_in_text(text):
     Example: 'Hello,world!How     are you?' would be converted to 'Hello, world! How are you?'
     '''
     return re.sub(r"([\.,\?!;])\s*(\S)", r"\1 \2", text)
+
+def count_occurrence_in_text(full_text: str, target_word: str, case_sensitive: bool = False) -> int:
+    """
+    Counts the occurrences of a target word in a given text.
+
+    Args:
+    - full_text (str): The text in which to search for the target word.
+    - target_word (str): The word to count.
+    - case_sensitive (bool, optional): Whether the search should be case-sensitive. Defaults to False.
+    """
+    flags = 0 if case_sensitive else re.IGNORECASE
+    word_counts = Counter(re.findall(rf'\b{re.escape(target_word)}\b', full_text, flags))
+    return word_counts[target_word] if case_sensitive else word_counts[target_word.lower()]
 
 def custom_round(num: float, threshold: float = 0.1) -> int:
     """
@@ -241,6 +255,12 @@ def remove_non_printable_light(text: str) -> str:
     Light cleaner to remove non-printable characters from the input text. Used in the clean_text()
     '''
     return ''.join(char for char in text if char.isprintable() or char.isspace())
+
+def remove_punctuation(text: str) -> str:
+    '''
+    Light cleaner using regex to remove punctuation from a text.
+    '''
+    return re.sub(r'[^\w\s]', '', text) 
 
 def sanitize_json_response(response: str) -> Union[str, bool]:
     """
@@ -438,7 +458,7 @@ def add_content_to_chatTable(content: str, role: str, chatTable: List[Dict[str, 
             chatTable.append({"role":"assistant", "content": f"{content}"})
         return chatTable
 
-def ask_question_gpt(question: str, role ="", max_tokens=1000) -> str:
+def ask_question_gpt(question: str, role ="", max_tokens=1000, verbose = True) -> str:
     """
     Queries OpenAI Instruct Model with a specific question. This has a better performance than getting a chat completion.
 
@@ -446,7 +466,7 @@ def ask_question_gpt(question: str, role ="", max_tokens=1000) -> str:
         question (str): The question to ask the model.
         role (str, optional): As the legacy method would initialize a role, you can use previously defined role which will be part of the prompt.
         max_tokens (int, optional): Maximum number of tokens to be for the completion - Knowing that total cannot exceed 4097
-        check_length (bool, optional): Will perform an aproximate check on the length of the input not to query if too heavy. For now, we limit to 4K.
+        verbose (bool, optional): Will print information in the console. Informations are the token cost and the instructions sent ChatGPT.
     Returns:
         str: The model's reply to the question.
 
@@ -474,9 +494,12 @@ def ask_question_gpt(question: str, role ="", max_tokens=1000) -> str:
         Question = {question}
         \nMake sure you take your time to understand the Role and follow the Role before answering the Question. Important: Answer ONLY the Question and nothing else.
         """
+        initial_token_usage += 50
+    if verbose:
+        print(f"Completion ~ {max_tokens} tokens. Request ~ {initial_token_usage} tokens.\nInstructions provided to GPT are:\n{instructions}")
     return request_gpt_instruct(instructions=instructions, max_tokens=max_request)
 
-def ask_question_gpt4(role: str, question: str, model=MODEL_GPT4, max_tokens=2000) -> str:
+def ask_question_gpt4(role: str, question: str, model=MODEL_GPT4, max_tokens=2000, verbose = False) -> str:
     """
     Queries Chat GPT 4 with a specific question. 
 
@@ -485,12 +508,13 @@ def ask_question_gpt4(role: str, question: str, model=MODEL_GPT4, max_tokens=200
         question (str): The question to ask the model.
         model (str, optional): The model to use. Defaults to GPT4. Althought it says GPT4, you can use the ChatModel
         max_tokens (int, optional): Maximum number of tokens for the answer. Default is 3000 which is huge.
-        check_length (bool, optional): Will perform an aproximate check on the length of the input not to query GPT if too long. For now, we limit to 4K only.
+        verbose (bool, optional): Will print information in the console. Informations are the token cost and the instructions sent ChatGPT.
     Returns:
         str: The model's reply to the question.
 
     Note:
         If max_tokens is set to 3000, a print statement will prompt you to adjust it.
+        Verbose is set to False by default as context is generally very long in GPT4 which flods the console.
     """
     maxi = 8192 if model == MODEL_GPT4 else 4097
     initial_token_usage = calculate_token(role) + calculate_token(question)
@@ -506,6 +530,8 @@ def ask_question_gpt4(role: str, question: str, model=MODEL_GPT4, max_tokens=200
               """)
     current_chat = initialize_role_in_chatTable(role)
     current_chat = add_content_to_chatTable(question, "user", current_chat)
+    if verbose:
+        print(f"Completion ~ {max_tokens} tokens. Request ~ {initial_token_usage} tokens.\Context provided to GPT is:\n{current_chat}")
     return request_chatgpt(current_chat, max_token=max_tokens, model=model)
 
 def calculate_token(text: str) -> int:
