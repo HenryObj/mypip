@@ -16,7 +16,7 @@ import datetime
 import inspect
 import tiktoken
 import json
-from typing import Callable, Any, Union, List, Dict
+from typing import Callable, Any, Union, List, Dict, Optional
 import re
 import time
 from urllib.parse import urlparse, urlunparse, quote, unquote
@@ -46,6 +46,12 @@ MODEL_EMB = r"text-embedding-ada-002"
 # *************************************************************************************************
 # *************************************** General Utilities ***************************************
 # *************************************************************************************************
+
+def clean_punctuation(text: str) -> str:
+    '''
+    Function to clean a text by removing space before a punctuation sign.
+    '''
+    return re.sub(r'\s([?.!,";:])', r'\1', text)
 
 def clean_text(text: str) -> str:
     '''
@@ -620,6 +626,37 @@ def initialize_role_in_chatTable(role_definition: str) -> List[Dict[str, str]]:
     This function takes this definition as a input and returns it into the chat_table_format.
     '''
     return [{"role":"system", "content":role_definition}]
+
+def print_gpt_conversation(data: List[Dict[str, str]], console = True) -> Optional[str]:
+    """
+    Display a GPT user-assistant conversation in a structured format.
+    
+    Parameters:
+    - data: List of dictionaries containing the role and content of the conversation.
+    - console (bool): Will print the conversation to the console. 
+    
+    Returns:
+    - Str or None: If console or error, returns None. Otherwise, returns the conversation as a string.
+    """
+    if not isinstance(data, list) or not all(isinstance(entry, dict) and 'role' in entry and 'content' in entry for entry in data):
+        log_issue("Input data is not a list of dictionaries with 'role' and 'content' keys.", print_gpt_conversation, f"This was the input data {data}")
+        return None
+    try:
+        if console:
+            for entry in data:
+                role = entry['role'].capitalize()
+                content = entry['content']
+                print(f"{role}: {content}\n")
+        else:
+            conversation = ""
+            for entry in data:
+                role = entry['role'].capitalize()
+                content = entry['content']
+                conversation += f"{role}: {content}\n\n"
+            return conversation
+    except Exception as e:
+        print(f"An error occurred while displaying the conversation: {e}")
+        return None
 
 # For local tests
 def print_len_token_price(file_path_or_text, Embed = False):
