@@ -448,21 +448,18 @@ def get_local_domain(from_url):
 # *************************************************************************************************
 
 def add_content_to_chatTable(content: str, role: str, chatTable: List[Dict[str, str]]) -> List[Dict[str, str]]:
-    '''
+    """
     Feeds a chatTable with the new query. Returns the new chatTable.
     Role is either 'assistant' when the AI is answering or 'user' when the user has a question.
     Added a security in case change of name.
-    '''
-    if role in ["user", "assistant"]:
-        chatTable.append({"role":f"{role}", "content": f"{content}"})
-        return chatTable
+    """
+    new_chatTable = list(chatTable)
+    normalized_role = role.lower()
+    if normalized_role in ["user", "client"]:
+        new_chatTable.append({"role": "user", "content": content})
     else:
-        #log_issue("Wrong entry for the chattable", add_content_to_chatTable, f"For the role {role}")
-        if role in ["User", "Client", "client"]:
-            chatTable.append({"role":"user", "content": f"{content}"})
-        else:
-            chatTable.append({"role":"assistant", "content": f"{content}"})
-        return chatTable
+        new_chatTable.append({"role": "assistant", "content": content})
+    return new_chatTable
 
 def ask_question_gpt(question: str, role ="", max_tokens=1000, verbose = True) -> str:
     """
@@ -598,10 +595,14 @@ def change_role_chatTable(previous_chat: List[Dict[str, str]], new_role: str) ->
         log_issue("Previous_chat is not a list", change_role_chatTable)
         return [{'role': 'system', 'content': new_role}]
     if len(previous_chat) == 0:
-        log_issue("Previous_chat is of 0 len", change_role_chatTable)
+        log_issue("Previous_chat is empty", change_role_chatTable)
         return [{'role': 'system', 'content': new_role}]
-    previous_chat.pop(0)
-    return [{'role': 'system', 'content': new_role}] + previous_chat
+    new_chat = list(previous_chat)
+    if new_chat[0]['role'] == 'system':
+        new_chat[0] = {'role': 'system', 'content': new_role}
+    else:
+        new_chat.insert(0, {'role': 'system', 'content': new_role})
+    return new_chat
 
 def check_for_ai_apologies(text_to_check : str) -> bool:
     """
