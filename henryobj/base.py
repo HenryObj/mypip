@@ -603,6 +603,16 @@ def change_role_chatTable(previous_chat: List[Dict[str, str]], new_role: str) ->
     previous_chat.pop(0)
     return [{'role': 'system', 'content': new_role}] + previous_chat
 
+def check_for_ai_apologies(text_to_check : str) -> bool:
+    """
+    Checks if the given text contains phrases that indicate an AI apology.
+    
+    Returns:
+    - bool: True if any of the AI apology phrases are found in the text, otherwise False.
+    """
+    apologies = ['as an ai', 'i\'m sorry, but', 'i apologize for ', ' as a chatbot ', 'i can\'t assist with']
+    return any(elem in text_to_check.lower() for elem in apologies)
+
 def embed_text(text: str, max_attempts: int = 3):
     '''
     Micro function which returns the embedding of one chunk of text or 0 if issue.
@@ -633,27 +643,22 @@ def print_gpt_conversation(data: List[Dict[str, str]], console = True) -> Option
     
     Parameters:
     - data: List of dictionaries containing the role and content of the conversation.
-    - console (bool): Will print the conversation to the console. 
+    - console (bool): Will also print the conversation to the console. True by default
     
     Returns:
-    - Str or None: If console or error, returns None. Otherwise, returns the conversation as a string.
+    - Str or None: Returns the conversation as a string. If error, returns None.
     """
     if not isinstance(data, list) or not all(isinstance(entry, dict) and 'role' in entry and 'content' in entry for entry in data):
         log_issue("Input data is not a list of dictionaries with 'role' and 'content' keys.", print_gpt_conversation, f"This was the input data {data}")
         return None
     try:
-        if console:
-            for entry in data:
-                role = entry['role'].capitalize()
-                content = entry['content']
-                print(f"{role}: {content}\n")
-        else:
-            conversation = ""
-            for entry in data:
-                role = entry['role'].capitalize()
-                content = entry['content']
-                conversation += f"{role}: {content}\n\n"
-            return conversation
+        conversation = ""
+        for entry in data:
+            role = entry['role'].capitalize()
+            content = entry['content']
+            conversation += f"{role}: {content}\n\n"
+            if console: print(f"{role}: {content}\n")
+        return conversation
     except Exception as e:
         print(f"An error occurred while displaying the conversation: {e}")
         return None
