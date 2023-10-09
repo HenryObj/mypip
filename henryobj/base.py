@@ -656,8 +656,9 @@ def print_gpt_conversation(data: List[Dict[str, str]], console = True) -> Option
         for entry in data:
             role = entry['role'].capitalize()
             content = entry['content']
-            conversation += f"{role}: {content}\n\n"
-            if console: print(f"{role}: {content}\n")
+            conversation += f"{role}: {content}\n"
+        conversation = remove_excess(conversation)
+        if console: print(conversation)
         return conversation
     except Exception as e:
         print(f"An error occurred while displaying the conversation: {e}")
