@@ -181,7 +181,7 @@ def new_chunk_text(text: str, target_token: int = 200) -> List[str]:
     current_token_count = 0
 
     for sentence in sentences:
-        sentence_tok = calculate_token_aproximatively(sentence)
+        sentence_tok = calculate_token(sentence)
         new_token_count =  current_token_count + sentence_tok
         
         # If adding this "sentence" doesn't exceed the limit, add it to the current chunk.
