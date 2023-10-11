@@ -640,6 +640,20 @@ def check_for_ai_apologies(text: str) -> bool:
     # re.IGNORECASE makes the search case-insensitive.
     return bool(re.search(pattern, text, re.IGNORECASE))
 
+def check_if_gptconv_format(conversation: List[Dict[str, str]]) -> bool:
+    '''
+    Checks if the structure of the List matches the GPT conversation format.
+    
+    Returns:
+    - bool: True if valid, False otherwise.
+    '''
+    for entry in conversation:
+        if not set(entry.keys()) == {'role', 'content'}:
+            return False
+        if not isinstance(entry['role'], str) or not isinstance(entry['content'], str):
+            return False
+    return True
+
 def convert_gptconv_to_list_dicts(gpt_conversation: str) -> Optional[List[Dict]]:
     """
     Converts a gpt_conv to a list of dictionaries, making necessary replacements.
