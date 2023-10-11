@@ -276,6 +276,20 @@ def remove_punctuation(text: str) -> str:
     '''
     return re.sub(r'[^\w\s]', '', text) 
 
+def safe_json_load(s: str):
+    """
+    Attempts to correct improperly escaped sequences and loads the string into a list of dictionaries using json.loads.
+    Will return the original string if it fails.
+    """
+    control_chars = {'\n':'\\n' , '\t':'\\t' , '\r':'\\r' , '\b':'\\b'}
+    for char, escape_seq in control_chars.items():
+        s = s.replace(char, escape_seq)
+    try:
+        return json.loads(s)
+    except Exception as e:
+        print(f"Failed to decode JSON. Error: {str(e)}")
+        return s
+
 def sanitize_json_response(response: str) -> Union[str, bool]:
     """
     Ensures the response has a JSON-like structure.
