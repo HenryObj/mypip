@@ -640,21 +640,6 @@ def check_for_ai_apologies(text: str) -> bool:
     # re.IGNORECASE makes the search case-insensitive.
     return bool(re.search(pattern, text, re.IGNORECASE))
 
-def sanitize_bad_gpt_output(gpt_output: str) -> str:
-    """
-    Sanitize bad outputs made by GPT according to bad output we already saw.
-
-    Returns:
-        - str: The cleaned gpt_output - always strip() the input
-    """
-    # Check for starting with the assistant prefixes
-    if gpt_output.startswith(("Assistant: ", "assistant: ")):
-        gpt_output = gpt_output[11:]
-    # Check for starting and ending with single or double quotes
-    if (gpt_output.startswith("'") and gpt_output.endswith("'")) or (gpt_output.startswith('"') and gpt_output.endswith('"')):
-        gpt_output = gpt_output[1:-1]
-    return gpt_output.strip()
-
 def convert_gptconv_to_list_dicts(gpt_conversation: str) -> Optional[List[Dict]]:
     """
     Converts a gpt_conv to a list of dictionaries, making necessary replacements.
@@ -700,6 +685,24 @@ def embed_text(text: str, max_attempts: int = 3):
     if check_co(): log_issue(f"No answer despite {max_attempts} attempts", embed_text, "Open AI is down")
     return res
 
+def get_gptconv_readable_format(gpt_conversation: str) -> str:
+    """
+    Formats a string format GPT conversation (after being extracted from DB) in a human-friendly way.
+
+    Returns:
+        - str: The formatted GPT conversation
+    """
+    data = convert_gptconv_to_list_dicts(gpt_conversation)
+    formatted_lines = []
+    if not data: 
+        return "Failed to convert the GPT conversation\n"
+    for entry in data:
+        role = entry['role']
+        content = entry['content'].strip()  # Remove any leading/trailing spaces or newlines
+        formatted_lines.append(f"{role.capitalize()}: {content}")
+    return '\n'.join(formatted_lines)
+
+
 def initialize_role_in_chatTable(role_definition: str) -> List[Dict[str, str]]:
     '''
     We need to define how we want our model to perform.
@@ -717,21 +720,11 @@ def print_gpt_models():
         name = elem["id"]
         if "gpt" in name or "embedding" in name: print(name)
 
-
 def print_gptconv_nicely(gpt_conversation: str) -> None:
     """
     Prints a string format GPT conversation (after being extracted from DB) in a human-friendly way.
     """
-    data = convert_gptconv_to_list_dicts(gpt_conversation)
-    print()
-    if not data: 
-        print("Failed to convert the GPT conversation")
-        return None
-    for entry in data:
-        role = entry['role']
-        content = entry['content'].strip()  # Remove any leading/trailing spaces or newlines
-        print(f"{role.capitalize()}: {content}")
-    print()
+    print(get_gptconv_readable_format(gpt_conversation))
 
 # For local tests
 def print_len_token_price(file_path_or_text, Embed = False):
@@ -869,6 +862,21 @@ def retry_if_too_short(func, *args, **kwargs):
             return result
     return None
 
+def sanitize_bad_gpt_output(gpt_output: str) -> str:
+    """
+    Sanitize bad outputs made by GPT according to bad output we already saw.
+
+    Returns:
+        - str: The cleaned gpt_output - always strip() the input
+    """
+    # Check for starting with the assistant prefixes
+    if gpt_output.startswith(("Assistant: ", "assistant: ")):
+        gpt_output = gpt_output[11:]
+    # Check for starting and ending with single or double quotes
+    if (gpt_output.startswith("'") and gpt_output.endswith("'")) or (gpt_output.startswith('"') and gpt_output.endswith('"')):
+        gpt_output = gpt_output[1:-1]
+    return gpt_output.strip()
+
 def self_affirmation_role(role_chatbot_in_text: str) -> str:
     '''
     Function to transform an instruction of the system prompt into a self-affirmation message.
@@ -884,36 +892,4 @@ def self_affirmation_role(role_chatbot_in_text: str) -> str:
 # *************************************************************
 
 if __name__ == "__main__":
-    #print(calculate_token(x))
-    #print(ask_question_gpt("What is the meaning of life? Give a long answer with references."))
     pass
-
-# Testing chat completion vs instruct:
-# Huge improvement (7sc vs 1sc) for instruct on the question side
-"""
-    start = time.time()
-    y = ask_question_gpt("You are an intelligent assistant", "What is the meaning of life", max_tokens=300)
-    one = time.time()
-    x = request_gpt_instruct("What is the meaning of life?")
-    end = time.time()
-    print(f"One is {one - start} sc // Two is {end - one}")
-    print(f"Chat {y} \n\n")
-    print("Instruct", x)
-"""
-
-# Testing tiktoken vs aproximation
-"""
-with open("/Users/henry/Coding/mypip/base/longtext.txt", "r") as file:
-        w = file.read()
-    
-    start = time.time()
-    for i in range(1000):
-       t = calculate_token_aproximatively(w)
-    
-    t1 = time.time()
-    for i in range(1000):
-        hh = calculate_token(w)
-
-    end = time.time()
-    print(f"First was done in {t1 - start} seconds - value is {t}. Second was done in {end - t1} seconds value is {hh}")
-"""
