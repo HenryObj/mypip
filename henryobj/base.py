@@ -176,16 +176,24 @@ def new_chunk_text(text: str, target_token: int = 200) -> List[str]:
         return [text]
     print(f"We need to chunk the text.\nCurrent tokens ~ {tok_text}. Target ~ {target_token}.\nLogically we should get about {custom_round(tok_text/target_token)} chunks")
     sentences = split_into_sentences(text)
+    
+    aprx = False
+    # Spacial case if there is no sentences or less sentences than the desired chunk. If so, we chunk by word.
+    if len(sentences) < int(tok_text/target_token) + 1:
+        sentences = text.split()
+        aprx = True
+    token_calculator = calculate_token_aproximatively if aprx else calculate_token
+
     final_chunks = []
     current_chunk = ""
     current_token_count = 0
 
     for sentence in sentences:
-        sentence_tok = calculate_token(sentence)
+        sentence_tok = token_calculator(sentence)  # This is a function variable here
         new_token_count =  current_token_count + sentence_tok
         
         # If adding this "sentence" doesn't exceed the limit, add it to the current chunk.
-        if current_token_count <= target_token * 1.05:
+        if new_token_count <= target_token * 1.05:
             current_chunk += sentence + " "
             current_token_count = new_token_count
 
