@@ -465,6 +465,11 @@ def get_local_domain(from_url):
     except Exception as e:
         log_issue(e, get_local_domain, f"For {from_url}")
 
+def get_primary_lang_code(lang_data: str) -> str:
+    # Split the lang_data by comma and extract the main language code of the first segment
+    primary_lang_code = lang_data.split(",")[0].split("-")[0]
+    return primary_lang_code
+
 # *************************************************************************************************
 # ****************************************** GPT Related ******************************************
 # *************************************************************************************************
