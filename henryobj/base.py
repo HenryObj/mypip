@@ -506,7 +506,7 @@ def ask_question_gpt(question: str, role ="", max_tokens=1000, verbose = True) -
         print(f"Your input + the requested tokens for the answer exceed the maximum amount of 4097.\n Please adjust the max_tokens to a MAXIMUM of {4000-initial_token_usage}")
         return ""
     if max_tokens == 1000:
-        print(f"""\nWarning: You are using default max_tokens.\n Your default response length is 750 words.\nIf you don't need that much, it will be faster and cheaper to reduce the max_token.\n
+        print(f"""\nWarning: You are using default max_tokens.\n Your default response length is 750 words.\nIf you don't need that much, it will be faster and cheaper to reduce the max_tokens.\n
               """)
         max_request = max_tokens - initial_token_usage
     else:
@@ -551,13 +551,13 @@ def ask_question_gpt4(role: str, question: str, model=MODEL_GPT4, max_tokens=200
         print(f"Your input + the requested tokens for the answer exceed the maximum amount of 4097.\n Please adjust the max_tokens to a MAXIMUM of {8000-initial_token_usage}")
         return ""
     if max_tokens == 2000:
-        print(f"""\nWarning: You are using default max_tokens.\n Your default response length is 1500 words.\nIf you don't need that much, it will be faster and cheaper to reduce the max_token.\n
+        print(f"""\nWarning: You are using default max_tokens.\n Your default response length is 1500 words.\nIf you don't need that much, it will be faster and cheaper to reduce the max_tokens.\n
               """)
     current_chat = initialize_role_in_chatTable(role)
     current_chat = add_content_to_chatTable(question, "user", current_chat)
     if verbose:
         print(f"Completion ~ {max_tokens} tokens. Request ~ {initial_token_usage} tokens.\Context provided to GPT is:\n{current_chat}")
-    return request_chatgpt(current_chat, max_token=max_tokens, model=model)
+    return request_chatgpt(current_chat, max_tokens=max_tokens, model=model)
 
 def calculate_token(text: str) -> int:
     """
@@ -707,13 +707,13 @@ def print_len_token_price(file_path_or_text, Embed = False):
     out = f"{name}: {len(content)} chars  **  ~ {tok} tokens ** ~ ${round(tok/1000 * price,2)}"
     print(out)
 
-def request_chatgpt(current_chat : list, max_token : int, stop_list = False, max_attempts = 3, model = MODEL_CHAT, temperature = 0, top_p = 1):
+def request_chatgpt(current_chat : list, max_tokens : int, stop_list = False, max_attempts = 3, model = MODEL_CHAT, temperature = 0, top_p = 1):
     """
     Calls the ChatGPT OpenAI completion endpoint with specified parameters.
 
     Args:
         current_chat (list): The prompt used for the request.
-        max_token (int): The maximum number of tokens to be used in the context (context = reply + question and role)
+        max_tokens (int): The maximum number of tokens to be used in the context (context = reply + question and role)
         stop_list (bool, optional): Whether to use specific stop tokens. Defaults to False.
         max_attempts (int, optional): Maximum number of retries. Defaults to 3.
         model (str, optional): ChatGPT OpenAI model used for the request. Defaults to 'MODEL_CHAT'.
@@ -732,7 +732,7 @@ def request_chatgpt(current_chat : list, max_token : int, stop_list = False, max
             response = openai.ChatCompletion.create(
                 messages= current_chat,
                 temperature=temperature,
-                max_tokens= int(max_token),
+                max_tokens= int(max_tokens),
                 top_p=top_p,
                 frequency_penalty=0,
                 presence_penalty=0,
@@ -761,7 +761,7 @@ def request_gpt_instruct(instructions : str, max_tokens = 300, max_attempts = 3,
 
     Args:
         instructions (str): The prompt used for the request.
-        max_token (int): The maximum number of tokens in the reply - defaulted to 300 (200 words)
+        max_tokens (int): The maximum number of tokens in the reply - defaulted to 300 (200 words)
         max_attempts (int, optional): Maximum number of retries. Defaults to 3.
         temperature (float, optional): Sampling temperature for the response. A value of 0 means deterministic output. Defaults to 0.
         top_p (float, optional): Nucleus sampling parameter, with 1 being 'take the best'. Defaults to 1.
