@@ -699,23 +699,25 @@ def embed_text(text: str, max_attempts: int = 3):
     if check_co(): log_issue(f"No answer despite {max_attempts} attempts", embed_text, "Open AI is down")
     return res
 
-def get_gptconv_readable_format(gpt_conversation: str) -> str:
+def get_gptconv_readable_format(gpt_conversation: Union[str, List[Dict[str, str]]]) -> str:
     """
     Formats a string format GPT conversation (after being extracted from DB) in a human-friendly way.
 
     Returns:
         - str: The formatted GPT conversation
     """
-    data = convert_gptconv_to_list_dicts(gpt_conversation)
-    formatted_lines = []
-    if not data: 
-        return "Failed to convert the GPT conversation\n"
-    for entry in data:
-        role = entry['role']
-        content = entry['content'].strip()  # Remove any leading/trailing spaces or newlines
-        formatted_lines.append(f"{role.capitalize()}: {content}")
-    return '\n'.join(formatted_lines)
+    try:
+        if isinstance(gpt_conversation, str):
+            gpt_conversation = convert_gptconv_to_list_dicts(gpt_conversation)
+        if not gpt_conversation or not isinstance(gpt_conversation, list):
+            return "Failed to convert the GPT conversation\n"
+        
+        formatted_lines = [f"{entry['role'].capitalize()}: {entry['content'].strip()}" for entry in gpt_conversation]
 
+        return '\n'.join(formatted_lines)
+    except Exception as e:
+        log_issue(e, get_gptconv_readable_format, f"This was the input {gpt_conversation}")
+        return "An error occurred while formatting the GPT conversation."
 
 def initialize_role_in_chatTable(role_definition: str) -> List[Dict[str, str]]:
     '''
