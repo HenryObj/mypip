@@ -626,15 +626,62 @@ def change_role_chatTable(previous_chat: List[Dict[str, str]], new_role: str) ->
         new_chat.insert(0, {'role': 'system', 'content': new_role})
     return new_chat
 
-def check_for_ai_apologies(text_to_check : str) -> bool:
+def check_for_ai_apologies(text: str) -> bool:
     """
     Checks if the given text contains phrases that indicate an AI apology.
     
     Returns:
     - bool: True if any of the AI apology phrases are found in the text, otherwise False.
     """
-    apologies = ['as an ai', 'i\'m sorry, but', 'i apologize for ', ' as a chatbot ', 'i can\'t assist with']
-    return any(elem in text_to_check.lower() for elem in apologies)
+    # The pattern captures all your phrases. 
+    # \b ensures word boundaries so "as an ailment" doesn't match "as an ai".
+    # \s* captures any amount of whitespace.
+    pattern = r'\b(as an ai|I\'m sorry, but|i apologize for|as a chatbot|i can\'t assist with)\b'
+    # re.IGNORECASE makes the search case-insensitive.
+    return bool(re.search(pattern, text, re.IGNORECASE))
+
+def sanitize_bad_gpt_output(gpt_output: str) -> str:
+    """
+    Sanitize bad outputs made by GPT according to bad output we already saw.
+
+    Returns:
+        - str: The cleaned gpt_output - always strip() the input
+    """
+    # Check for starting with the assistant prefixes
+    if gpt_output.startswith(("Assistant: ", "assistant: ")):
+        gpt_output = gpt_output[11:]
+    # Check for starting and ending with single or double quotes
+    if (gpt_output.startswith("'") and gpt_output.endswith("'")) or (gpt_output.startswith('"') and gpt_output.endswith('"')):
+        gpt_output = gpt_output[1:-1]
+    return gpt_output.strip()
+
+def convert_gptconv_to_list_dicts(gpt_conversation: str) -> Optional[List[Dict]]:
+    """
+    Converts a gpt_conv to a list of dictionaries, making necessary replacements.
+    
+    Returns:
+        - List[Dict]: A list of dictionaries after processing the input string.
+        - None if issue
+    """
+    try:
+        # Remove control char and replace single quotes outside of the double quotes with double quotes
+        gpt_conversation = gpt_conversation.replace("\n", "\\n").replace("\t", "\\t").replace("\r", "\\r")
+        json_str = ''
+        inside_quotes = False
+        for char in gpt_conversation:
+            if char == '"' and not inside_quotes:
+                inside_quotes = True
+            elif char == '"' and inside_quotes:
+                inside_quotes = False
+
+            if char == "'" and not inside_quotes:
+                json_str += '"'
+            else:
+                json_str += char
+        return json.loads(remove_excess(json_str))
+    except Exception as e:
+        log_issue(e, convert_gptconv_to_list_dicts, f"For the conversation: {gpt_conversation}")
+        return None
 
 def embed_text(text: str, max_attempts: int = 3):
     '''
@@ -660,32 +707,31 @@ def initialize_role_in_chatTable(role_definition: str) -> List[Dict[str, str]]:
     '''
     return [{"role":"system", "content":role_definition}]
 
-def print_gpt_conversation(data: List[Dict[str, str]], console = True) -> Optional[str]:
+def print_gpt_models():
+    '''
+    To list the gpt models provided by OpenAI.
+    '''
+    response = openai.Model.list() # list all models
+
+    for elem in response["data"]:
+        name = elem["id"]
+        if "gpt" in name or "embedding" in name: print(name)
+
+
+def print_gptconv_nicely(gpt_conversation: str) -> None:
     """
-    Display a GPT user-assistant conversation in a structured format.
-    
-    Parameters:
-    - data: List of dictionaries containing the role and content of the conversation.
-    - console (bool): Will also print the conversation to the console. True by default
-    
-    Returns:
-    - Str or None: Returns the conversation as a string. If error, returns None.
+    Prints a string format GPT conversation (after being extracted from DB) in a human-friendly way.
     """
-    if not isinstance(data, list) or not all(isinstance(entry, dict) and 'role' in entry and 'content' in entry for entry in data):
-        log_issue("Input data is not a list of dictionaries with 'role' and 'content' keys.", print_gpt_conversation, f"This was the input data {data}")
+    data = convert_gptconv_to_list_dicts(gpt_conversation)
+    print()
+    if not data: 
+        print("Failed to convert the GPT conversation")
         return None
-    try:
-        conversation = ""
-        for entry in data:
-            role = entry['role'].capitalize()
-            content = entry['content']
-            conversation += f"{role}: {content}\n"
-        conversation = remove_excess(conversation)
-        if console: print(conversation)
-        return conversation
-    except Exception as e:
-        print(f"An error occurred while displaying the conversation: {e}")
-        return None
+    for entry in data:
+        role = entry['role']
+        content = entry['content'].strip()  # Remove any leading/trailing spaces or newlines
+        print(f"{role.capitalize()}: {content}")
+    print()
 
 # For local tests
 def print_len_token_price(file_path_or_text, Embed = False):
@@ -796,16 +842,6 @@ def request_gpt_instruct(instructions : str, max_tokens = 300, max_attempts = 3,
         print(f" ** We have an issue with Open AI using the model {MODEL_INSTRUCT}")
         log_issue(f"No answer despite {max_attempts} attempts", request_chatgpt, "Open AI is down")
     return rep
-
-def print_gpt_models():
-    '''
-    To list the gpt models provided by OpenAI.
-    '''
-    response = openai.Model.list() # list all models
-
-    for elem in response["data"]:
-        name = elem["id"]
-        if "gpt" in name or "embedding" in name: print(name)
 
 def retry_if_too_short(func, *args, **kwargs):
     """
