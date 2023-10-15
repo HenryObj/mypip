@@ -61,6 +61,14 @@ def clean_text(text: str) -> str:
     text = remove_excess(text)
     return text
 
+def convert_dict_to_text(dictionnary : dict, break_two_lines = False) -> str:
+    """
+    To have the keys as "title" and the values as "content".
+    If break_two_lines is set to True, we separate each block by an additional break line.
+    """
+    x = '\n\n' if break_two_lines else '\n'
+    return x.join([f"{y}".join(str(value)) for y, value in dictionnary.items()])
+
 def correct_spaces_in_text(text):
     '''
     Ensures punctuation marks like ".", "?", "!", ";", and "," are correctly spaced with only one space with the next non-space char. 
