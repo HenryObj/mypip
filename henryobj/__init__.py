@@ -1,2 +1,2 @@
 from .base import *
-from .internet import *
+from .web import *
