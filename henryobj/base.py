@@ -2,10 +2,10 @@
     @Author:				Henry Obegi <HenryObj>
     @Email:					hobegi@gmail.com
     @Creation:				Friday 1st of September
-    @LastModif:             Saterday 2nd of September
+    @LastModif:             Wednesday 11th of October
     @Filename:				base.py
     @Purpose                All the utility functions
-    @Partof                 Spar
+    @Partof                 pip package
 """
 
 # ************** IMPORTS ****************
@@ -32,7 +32,7 @@ MODEL_CHAT = r"gpt-3.5-turbo"
 MODEL_INSTRUCT = r"gpt-3.5-turbo-instruct"
 MODEL_CHAT_LATEST = r"gpt-3.5-turbo-0613"
 
-MAX_TOKEN_CHAT_INSTRUCT = 4097 # Max is 4,097 tokens - this 
+MAX_TOKEN_CHAT_INSTRUCT = 4097 # Max is 4,097 tokens
 
 MODEL_GPT4 = r"gpt-4"
 MODEL_GPT4_LATEST = r"gpt-4-0613"
