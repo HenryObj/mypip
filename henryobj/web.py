@@ -28,8 +28,6 @@ HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3",
 }
 
-memory_store = {}  # In-memory storage for crawled data
-
 # ****** SET UP SESSION OBJECT FOR SCRAPPING *******
 
 '''
@@ -133,11 +131,13 @@ def clean_url_into_title(url: str) -> str:
     path = parsed_url.path.strip('/')
     return f"{domain}/{path}"
 
-def crawl_website(url: str, how_many_pages = 30) -> dict:
+def crawl_website(url: str, how_many_pages = 30, memory_store = None) -> dict:
     """
     Crawl website starting from a given URL. Stores data in-memory. Return the dictionnary with all the content.
     """
     submitted = 0
+    if not memory_store:
+        memory_store = {}  # In-memory storage for crawled data
     local_domain = urlparse(url).netloc 
     queue = deque([url])
     seen = set([url])
@@ -155,30 +155,12 @@ def crawl_website(url: str, how_many_pages = 30) -> dict:
             submitted += 1
             if submitted == how_many_pages:
                 break
-            future.add_done_callback(lambda future: wrap_handle_fetch_result(future, data_name))
+            future.add_done_callback(lambda future: wrap_handle_fetch_result(future, data_name, memory_store))
             for link in fetch_domain_links(local_domain, url):
                 if link not in seen:
                     queue.append(link)
                     seen.add(link)
     return memory_store
-
-def crawl_list_urls(list_urls: List[str]) -> bool:
-    """
-    Crawl a list of individual URLs and saves it in the dictionnary.
-    """
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        while list_urls:
-            url = list_urls.pop() #returns the last element and removes it from the queue
-            if not check_valid_url(url):
-                continue
-            response = session.head(url, headers=HEADERS)
-            content_type = response.headers.get("content-type", "")
-            if not content_type_is_text(content_type):
-                continue
-            data_name = clean_url_into_title(url)
-            future = executor.submit(fetch_content_url, url)
-            future.add_done_callback(lambda future: wrap_handle_fetch_result(future, data_name))
-    return True
 
 def fetch_hyperlinks(url: str) -> List[str]:
     """
@@ -199,7 +181,7 @@ def fetch_hyperlinks(url: str) -> List[str]:
 
 # Fetch URL - works as a standalone
 # Might want to test the driver version with selenium - driver = webdriver.Firefox()
-def fetch_content_url(url, attempt=0):
+def fetch_content_url(url: str, attempt: int = 0) -> Optional[str]:
     """
     Fetch and clean content from a webpage.
     """
@@ -316,13 +298,13 @@ def remove_reviews(soup : BeautifulSoup) -> BeautifulSoup:
                 div.decompose()
     return soup
 
-def wrap_handle_fetch_result(future, data_name):
+def wrap_handle_fetch_result(future, data_name, memory_store):
     '''
     Wrapper to allow adding paramaters to the callback function.
     '''
-    crawl_handle_fetch_result(future, data_name)
+    crawl_handle_fetch_result(future, data_name, memory_store)
 
-def crawl_handle_fetch_result(future, data_name: str) -> None:
+def crawl_handle_fetch_result(future, data_name, memory_store) -> None:
     """
     Handles fetched data and stores it in-memory.
     """
