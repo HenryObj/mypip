@@ -18,6 +18,7 @@ from collections import deque
 from requests.adapters import HTTPAdapter
 from requests.exceptions import SSLError
 from urllib3.util.retry import Retry
+from urllib.parse import urljoin
 
 # ****** PATHS & GLOBAL VARIABLES *******
 
@@ -253,7 +254,9 @@ def fetch_domain_links(local_domain, url):
                     link = link[1:]
                     valid_link = f"https://{local_domain}/{link}"
                 elif link.startswith("#") or link.startswith("mailto:"):
-                    continue            
+                    continue
+                else:
+                    valid_link = urljoin(url, link)            
             if valid_link:
                 if valid_link.endswith("/"):
                     valid_link = valid_link[:-1]
