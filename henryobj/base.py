@@ -695,12 +695,12 @@ def convert_gptconv_to_list_dicts(gpt_conversation: str) -> Optional[List[Dict]]
         log_issue(e, convert_gptconv_to_list_dicts, f"For the conversation: {gpt_conversation}")
         return None
 
-def embed_text(text: str, max_attempts: int = 3):
+def embed_text(text: str, max_attempts: int = 3) -> List[float]:
     '''
     Micro function which returns the embedding of one chunk of text or 0 if issue.
     Used for the multi-threading.
     '''
-    res = 0
+    res = [0]
     if text == "": return res
     attempts = 0
     while attempts < max_attempts:
@@ -708,8 +708,12 @@ def embed_text(text: str, max_attempts: int = 3):
             res = openai.Embedding.create(input=text, engine=MODEL_EMB)['data'][0]['embedding']
             return res
         except Exception as e:
+            if not check_co():
+                print(" Warning: You don't have internet. Embedding will not work. Returning 0.")
+                return 0
             attempts += 1
-    if check_co(): log_issue(f"No answer despite {max_attempts} attempts", embed_text, "Open AI is down")
+            print(f"OAI Embedding faced the exception {e} at attempt # {attempts} out of 3")
+    log_issue(f"No answer despite {max_attempts} attempts", embed_text, "Open AI is down. Returning 0")
     return res
 
 def get_gptconv_readable_format(gpt_conversation: Union[str, List[Dict[str, str]]]) -> str:
