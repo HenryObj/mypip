@@ -649,7 +649,7 @@ def check_for_ai_apologies(text: str) -> bool:
     # The pattern captures all your phrases. 
     # \b ensures word boundaries so "as an ailment" doesn't match "as an ai".
     # \s* captures any amount of whitespace.
-    pattern = r'\b(as an ai|I\'m sorry, but|i apologize for|as a chatbot|i can\'t assist with)\b'
+    pattern = r'\b(as an ai|I\'m sorry, but|i apologize for|as a chatbot|i can\'t assist with|Assistant:)\b'
     # re.IGNORECASE makes the search case-insensitive.
     return bool(re.search(pattern, text, re.IGNORECASE))
 
