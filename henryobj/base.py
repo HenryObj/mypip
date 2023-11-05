@@ -115,11 +115,6 @@ def is_json(myjson: str) -> bool:
     return False
   return True
 
-def log_issue(exception, function, message):
-    # Your log_issue implementation would be here.
-    # For this example, I'm using a simple print statement.
-    print(f"Error in function {function.__name__}: {exception}. Message: {message}")
-
 def generate_unique_integer():
     '''
     Returns a random integer. Should be unique because between 0 and 2*32 -1 but still we can check after.
@@ -159,7 +154,7 @@ def log_issue(exception: Exception, func: Callable[..., Any], additional_info: s
     '''
     now = datetime.datetime.now().strftime("%d/%m/%y %H:%M:%S")
     module_name = get_module_name(func)
-    print(f" * ERROR HO144 * Issue in module {module_name} with {func.__name__} ** Info: {additional_info} ** Exception: {exception} ** When: {now}\n")
+    print(f" * 🚨 ERROR HO144 * Issue in module {module_name} with {func.__name__} ** Info: {additional_info} ** Exception: {exception} ** When: {now}\n")
 
 # local tests
 def lprint(*args: Any):
