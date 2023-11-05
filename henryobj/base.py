@@ -634,17 +634,21 @@ def change_role_chatTable(previous_chat: List[Dict[str, str]], new_role: str) ->
         new_chat.insert(0, {'role': 'system', 'content': new_role})
     return new_chat
 
-def check_for_ai_apologies(text: str) -> bool:
+def check_for_ai_warning(text: str) -> bool:
     """
-    Checks if the given text contains phrases that indicate an AI apology.
+    Checks if the given text contains phrases that indicate an "AI warning".
+    
+    Parameters:
+    - text (str): The text to be searched for AI warning phrases.
     
     Returns:
-    - bool: True if any of the AI apology phrases are found in the text, otherwise False.
+    - bool: True if any of the AI warning phrases are found in the text, otherwise False.
     """
-    # The pattern captures all your phrases. 
-    # \b ensures word boundaries so "as an ailment" doesn't match "as an ai".
-    # \s* captures any amount of whitespace.
-    pattern = r'\b(as an ai|I\'m sorry, but|i apologize for|as a chatbot|i can\'t assist with|Assistant:)\b'
+    # Updated pattern to include "as a large language model" and remove less specific phrases.
+    pattern = r'\b(as an ai|as a large language model|as a chatbot|as a virtual assistant|'\
+              r'as a bot|as an artificial intelligence|as an automated|'\
+              r'Assistant:|GPT-?\d+|OpenAI)\b'
+    
     # re.IGNORECASE makes the search case-insensitive.
     return bool(re.search(pattern, text, re.IGNORECASE))
 
