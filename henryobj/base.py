@@ -28,19 +28,27 @@ from collections import Counter
 OAI_KEY = os.getenv("OAI_API_KEY")
 openai.api_key = OAI_KEY
 
-MODEL_CHAT = r"gpt-3.5-turbo"
+# ****** TOKEN LIMITATIONS
+MAX_TOKEN_OUTPUT = 4096
+MAX_TOKEN_OUTPUT_DEFAULT = 300
+MAX_TOKEN_OUTPUT_DEFAULT_HUGE = 3000
+
+MAX_TOKEN_INPUT_OLD = 4096 # Max is 4,096 tokens
+MAX_TOKEN_INPUT_GPT4_TURBO = 128000
+MAX_TOKEN_INPUT_GPT4 = 8192
+
+# ****** MODELS
+MODEL_GPT4_TURBO = r"gpt-4-1106-preview" #Max 128,000 token context 4,096 output
+MODEL_GPT4_STABLE = r"gpt-4" # 8K context and 4,096 output
+
+MODEL_CHAT = r"gpt-3.5-turbo-1106" # Context 16,385 tokens - Reply 4,096
+MODEL_CHAT_STABLE = r"gpt-3.5-turbo"
 MODEL_INSTRUCT = r"gpt-3.5-turbo-instruct"
-MODEL_CHAT_LATEST = r"gpt-3.5-turbo-0613"
 
-MAX_TOKEN_CHAT_INSTRUCT = 4097 # Max is 4,097 tokens
-
-MODEL_GPT4 = r"gpt-4"
-MODEL_GPT4_LATEST = r"gpt-4-0613"
-
-MAX_TOKEN_GPT4 = 8192 # This is for both the message and the completion
-
-OPEN_AI_ISSUE = r"%$144$%" # When OpenAI is down
 MODEL_EMB = r"text-embedding-ada-002"
+
+# ****** OTHER
+OPEN_AI_ISSUE = r"%$144$%" # When OpenAI is down
 
 
 # *************************************************************************************************
@@ -507,11 +515,11 @@ def ask_question_gpt(question: str, role ="", max_tokens=1000, verbose = True) -
         If max_tokens is left to 1000, a print statement will recommand you to adjust it.
     """
     initial_token_usage = calculate_token(role) + calculate_token(question)
-    if initial_token_usage > MAX_TOKEN_CHAT_INSTRUCT:
+    if initial_token_usage > MAX_TOKEN_INPUT_OLD:
         print("Your input is too large for the query. Use'new_chunk_text' to chunk the text beforehand.")
         return ""
-    if initial_token_usage + max_tokens > MAX_TOKEN_CHAT_INSTRUCT:
-        print(f"Your input + the requested tokens for the answer exceed the maximum amount of 4097.\n Please adjust the max_tokens to a MAXIMUM of {4000-initial_token_usage}")
+    if initial_token_usage + max_tokens > MAX_TOKEN_INPUT_OLD:
+        print(f"Your input + the requested tokens for the answer exceed the maximum amount of 4097.\n Please adjust the max_tokens to a MAXIMUM of {MAX_TOKEN_INPUT_OLD-initial_token_usage}")
         return ""
     if max_tokens == 1000:
         print(f"""\nWarning: You are using default max_tokens.\n Your default response length is 750 words.\nIf you don't need that much, it will be faster and cheaper to reduce the max_tokens.\n
@@ -532,7 +540,7 @@ def ask_question_gpt(question: str, role ="", max_tokens=1000, verbose = True) -
         print(f"Completion ~ {max_tokens} tokens. Request ~ {initial_token_usage} tokens.\nInstructions provided to GPT are:\n{instructions}")
     return request_gpt_instruct(instructions=instructions, max_tokens=max_request)
 
-def ask_question_gpt4(role: str, question: str, model=MODEL_GPT4, max_tokens=2000, verbose = False) -> str:
+def ask_question_gpt4(role: str, question: str, model=MODEL_GPT4_TURBO, max_tokens=MAX_TOKEN_OUTPUT_DEFAULT_HUGE, verbose = False) -> str:
     """
     Queries Chat GPT 4 with a specific question. 
 
@@ -549,16 +557,17 @@ def ask_question_gpt4(role: str, question: str, model=MODEL_GPT4, max_tokens=200
         If max_tokens is set to 3000, a print statement will prompt you to adjust it.
         Verbose is set to False by default as context is generally very long in GPT4 which flods the console.
     """
-    maxi = 8192 if model == MODEL_GPT4 else 4097
+    maxi = MAX_TOKEN_INPUT_GPT4_TURBO if model == MODEL_GPT4_TURBO else MAX_TOKEN_INPUT_GPT4
     initial_token_usage = calculate_token(role) + calculate_token(question)
 
     if initial_token_usage > maxi:
         print("Your input is too large for the query. Use'new_chunk_text' to chunk the text beforehand.")
         return ""
+    # Not sure the below actually happens - to check
     if initial_token_usage + max_tokens > maxi:
-        print(f"Your input + the requested tokens for the answer exceed the maximum amount of 4097.\n Please adjust the max_tokens to a MAXIMUM of {8000-initial_token_usage}")
+        print(f"Your input + the requested tokens for the answer exceed the maximum amount of {maxi}.\n Please adjust the max_tokens to a MAXIMUM of {maxi-initial_token_usage}")
         return ""
-    if max_tokens == 2000:
+    if max_tokens == MAX_TOKEN_OUTPUT_DEFAULT_HUGE:
         print(f"""\nWarning: You are using default max_tokens.\n Your default response length is 1500 words.\nIf you don't need that much, it will be faster and cheaper to reduce the max_tokens.\n
               """)
     current_chat = initialize_role_in_chatTable(role)
@@ -778,7 +787,7 @@ def print_len_token_price(file_path_or_text, Embed = False):
     out = f"{name}: {len(content)} chars  **  ~ {tok} tokens ** ~ ${round(tok/1000 * price,2)}"
     print(out)
 
-def request_chatgpt(current_chat : list, max_tokens : int, stop_list = False, max_attempts = 3, model = MODEL_CHAT, temperature = 0, top_p = 1):
+def request_chatgpt(current_chat: list, max_tokens: int, stop_list=False, max_attempts=3, model=MODEL_CHAT, temperature=0, top_p=1, json=False):
     """
     Calls the ChatGPT OpenAI completion endpoint with specified parameters.
 
@@ -790,10 +799,16 @@ def request_chatgpt(current_chat : list, max_tokens : int, stop_list = False, ma
         model (str, optional): ChatGPT OpenAI model used for the request. Defaults to 'MODEL_CHAT'.
         temperature (float, optional): Sampling temperature for the response. A value of 0 means deterministic output. Defaults to 0.
         top_p (float, optional): Nucleus sampling parameter, with 1 being 'take the best'. Defaults to 1.
+        json (bool, optional): Whether we want to force the output in JSON or not.
 
     Returns:
         str: The response text or 'OPEN_AI_ISSUE' if an error occurs (e.g., if OpenAI service is down).
     """
+    if model in [MODEL_CHAT, MODEL_GPT4_TURBO]:
+        response_format = "json_object" if json else "text"
+    else:
+        log_issue("You are using a model which doesn't support JSON object - we depreciated the old models", request_chatgpt)
+        return ""
     stop = stop_list if (stop_list and len(stop_list) < 4) else ""
     attempts = 0
     valid = False
@@ -809,6 +824,7 @@ def request_chatgpt(current_chat : list, max_tokens : int, stop_list = False, ma
                 presence_penalty=0,
                 stop=stop,
                 model= model,
+                response_format=response_format,
             )
             rep = response["choices"][0]["message"]["content"]
             rep = rep.strip()
@@ -824,9 +840,8 @@ def request_chatgpt(current_chat : list, max_tokens : int, stop_list = False, ma
     if rep == OPEN_AI_ISSUE and check_co():
         print(f" ** We have an issue with Open AI using the model {model}")
         log_issue(f"No answer despite {max_attempts} attempts", request_chatgpt, "Open AI is down")
-    return rep
 
-def request_gpt_instruct(instructions : str, max_tokens = 300, max_attempts = 3, temperature = 0, top_p = 1) -> str:
+def request_gpt_instruct(instructions: str, max_tokens=300, max_attempts=3, temperature=0, top_p=1) -> str:
     '''
     Calls the OpenAI completion endpoint with specified parameters.
 
@@ -866,7 +881,6 @@ def request_gpt_instruct(instructions : str, max_tokens = 300, max_attempts = 3,
     if rep == OPEN_AI_ISSUE and check_co():
         print(f" ** We have an issue with Open AI using the model {MODEL_INSTRUCT}")
         log_issue(f"No answer despite {max_attempts} attempts", request_chatgpt, "Open AI is down")
-    return rep
 
 def retry_if_too_short(func, *args, **kwargs):
     """
