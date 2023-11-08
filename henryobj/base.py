@@ -540,7 +540,7 @@ def ask_question_gpt(question: str, role ="", max_tokens=1000, verbose = True) -
         print(f"Completion ~ {max_tokens} tokens. Request ~ {initial_token_usage} tokens.\nInstructions provided to GPT are:\n{instructions}")
     return request_gpt_instruct(instructions=instructions, max_tokens=max_request)
 
-def ask_question_gpt4(role: str, question: str, model=MODEL_GPT4_TURBO, max_tokens=MAX_TOKEN_OUTPUT_DEFAULT_HUGE, verbose = False,  json=False) -> str:
+def ask_question_gpt4(role: str, question: str, model=MODEL_GPT4_TURBO, max_tokens=MAX_TOKEN_OUTPUT_DEFAULT_HUGE, verbose = False, json_on=False) -> str:
     """
     Queries Chat GPT 4 with a specific question. 
 
@@ -574,7 +574,7 @@ def ask_question_gpt4(role: str, question: str, model=MODEL_GPT4_TURBO, max_toke
     current_chat = add_content_to_chatTable(question, "user", current_chat)
     if verbose:
         print(f"Completion ~ {max_tokens} tokens. Request ~ {initial_token_usage} tokens.\Context provided to GPT is:\n{current_chat}")
-    return request_chatgpt(current_chat, max_tokens=max_tokens, model=model, json=False)
+    return request_chatgpt(current_chat, max_tokens=max_tokens, model=model, json_on=False)
 
 def calculate_token(text: str) -> int:
     """
