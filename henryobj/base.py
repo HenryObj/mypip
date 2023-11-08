@@ -568,13 +568,13 @@ def ask_question_gpt4(role: str, question: str, model=MODEL_GPT4_TURBO, max_toke
         print(f"Your input + the requested tokens for the answer exceed the maximum amount of {maxi}.\n Please adjust the max_tokens to a MAXIMUM of {maxi-initial_token_usage}")
         return ""
     if max_tokens == MAX_TOKEN_OUTPUT_DEFAULT_HUGE:
-        print(f"""\nWarning: You are using default max_tokens.\n Your default response length is 1500 words.\nIf you don't need that much, it will be faster and cheaper to reduce the max_tokens.\n
+        print(f"""\nWarning: You are using default max_tokens.\n Your default response length is 2500 words. This will likely take a lot of time to process!!\nIf you don't need that much, it will be faster and cheaper to reduce the max_tokens.\n
               """)
     current_chat = initialize_role_in_chatTable(role)
     current_chat = add_content_to_chatTable(question, "user", current_chat)
     if verbose:
         print(f"Completion ~ {max_tokens} tokens. Request ~ {initial_token_usage} tokens.\Context provided to GPT is:\n{current_chat}")
-    return request_chatgpt(current_chat, max_tokens=max_tokens, model=model,  json=False)
+    return request_chatgpt(current_chat, max_tokens=max_tokens, model=model, json=False)
 
 def calculate_token(text: str) -> int:
     """
@@ -804,11 +804,11 @@ def request_chatgpt(current_chat: list, max_tokens: int, stop_list=False, max_at
     Returns:
         str: The response text or 'OPEN_AI_ISSUE' if an error occurs (e.g., if OpenAI service is down).
     """
-    if model in [MODEL_CHAT, MODEL_GPT4_TURBO]:
-        response_format = "json_object" if json else "text"
-    else:
-        log_issue("You are using a model which doesn't support JSON object - we depreciated the old models", request_chatgpt)
-        return ""
+    #if model in [MODEL_CHAT, MODEL_GPT4_TURBO]:
+    #    response_format = "json_object" if json else "text"
+    #else:
+    #    log_issue("You are using a model which doesn't support JSON object - we depreciated the old models", request_chatgpt)
+    #    return ""
     stop = stop_list if (stop_list and len(stop_list) < 4) else ""
     attempts = 0
     valid = False
@@ -824,22 +824,24 @@ def request_chatgpt(current_chat: list, max_tokens: int, stop_list=False, max_at
                 presence_penalty=0,
                 stop=stop,
                 model= model,
-                response_format=response_format,
+                #response_format=  - for now it doesn't work
             )
             rep = response["choices"][0]["message"]["content"]
             rep = rep.strip()
             valid = True
         except Exception as e:
+            rep = OPEN_AI_ISSUE
             attempts += 1
             if 'Rate limit reached' in e:
                 print(f"Rate limit reached. We will slow down and sleep for 300ms. This was attempt number {attempts}/{max_attempts}")
                 time.sleep(0.3)
             else:
                 print(f"Error. This is attempt number {attempts}/{max_attempts}. The exception is {e}. Trying again")
-                rep = OPEN_AI_ISSUE
     if rep == OPEN_AI_ISSUE and check_co():
         print(f" ** We have an issue with Open AI using the model {model}")
         log_issue(f"No answer despite {max_attempts} attempts", request_chatgpt, "Open AI is down")
+    else:
+        return rep
 
 def request_gpt_instruct(instructions: str, max_tokens=300, max_attempts=3, temperature=0, top_p=1) -> str:
     '''
@@ -872,6 +874,7 @@ def request_gpt_instruct(instructions: str, max_tokens=300, max_attempts=3, temp
             valid = True
         except Exception as e:
             attempts += 1
+            rep = OPEN_AI_ISSUE
             if 'Rate limit reached' in e:
                 print(f"Rate limit reached. We will slow down and sleep for 300ms. This was attempt number {attempts}/{max_attempts}")
                 time.sleep(0.3)
@@ -881,6 +884,8 @@ def request_gpt_instruct(instructions: str, max_tokens=300, max_attempts=3, temp
     if rep == OPEN_AI_ISSUE and check_co():
         print(f" ** We have an issue with Open AI using the model {MODEL_INSTRUCT}")
         log_issue(f"No answer despite {max_attempts} attempts", request_chatgpt, "Open AI is down")
+    else:
+        return rep
 
 def retry_if_too_short(func, *args, **kwargs):
     """
