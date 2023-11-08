@@ -787,7 +787,7 @@ def print_len_token_price(file_path_or_text, Embed = False):
     out = f"{name}: {len(content)} chars  **  ~ {tok} tokens ** ~ ${round(tok/1000 * price,2)}"
     print(out)
 
-def request_chatgpt(current_chat: list, max_tokens: int, stop_list=False, max_attempts=3, model=MODEL_CHAT, temperature=0, top_p=1, json=False):
+def request_chatgpt(current_chat: list, max_tokens: int, stop_list=False, max_attempts=3, model=MODEL_CHAT, temperature=0, top_p=1, json_on=False):
     """
     Calls the ChatGPT OpenAI completion endpoint with specified parameters.
 
@@ -805,7 +805,7 @@ def request_chatgpt(current_chat: list, max_tokens: int, stop_list=False, max_at
         str: The response text or 'OPEN_AI_ISSUE' if an error occurs (e.g., if OpenAI service is down).
     """
     #if model in [MODEL_CHAT, MODEL_GPT4_TURBO]:
-    #    response_format = "json_object" if json else "text"
+    #    response_format = "json_object" if json_on else "text"
     #else:
     #    log_issue("You are using a model which doesn't support JSON object - we depreciated the old models", request_chatgpt)
     #    return ""
