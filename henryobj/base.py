@@ -1,8 +1,8 @@
 """
     @Author:				Henry Obegi <HenryObj>
     @Email:					hobegi@gmail.com
-    @Creation:				Friday 1st of September
-    @LastModif:             Wednesday 11th of October
+    @Creation:				Friday 1st of September 2023
+    @LastModif:             Wednesday 22nd of November 2023
     @Filename:				base.py
     @Purpose                All the utility functions
     @Partof                 pip package
@@ -33,13 +33,14 @@ MAX_TOKEN_OUTPUT = 4096
 MAX_TOKEN_OUTPUT_DEFAULT = 300
 MAX_TOKEN_OUTPUT_DEFAULT_HUGE = 3000
 
-MAX_TOKEN_INPUT_OLD = 4096 # Max is 4,096 tokens
-MAX_TOKEN_INPUT_GPT4_TURBO = 128000
-MAX_TOKEN_INPUT_GPT4 = 8192
+MAX_TOKEN_WINDOW_OLD = 4096 
+MAX_TOKEN_WINDOW_GPT4_TURBO = 128000
+MAX_TOKEN_WINDOW_GPT35_TURBO = 16385
+MAX_TOKEN_WINDOW_GPT4 = 8192
 
 # ****** MODELS
-MODEL_GPT4_TURBO = r"gpt-4-1106-preview" #Max 128,000 token context 4,096 output
-MODEL_GPT4_STABLE = r"gpt-4" # 8K context and 4,096 output
+MODEL_GPT4_TURBO = r"gpt-4-1106-preview" #Max 128,000 token context window total with 4,096 output
+MODEL_GPT4_STABLE = r"gpt-4" # 8K context window and 4,096 output
 
 MODEL_CHAT = r"gpt-3.5-turbo-1106" # Context 16,385 tokens - Reply 4,096
 MODEL_CHAT_STABLE = r"gpt-3.5-turbo"
@@ -49,6 +50,7 @@ MODEL_EMB = r"text-embedding-ada-002"
 
 # ****** OTHER
 OPEN_AI_ISSUE = r"%$144$%" # When OpenAI is down
+ERROR_MESSAGE = "An error occurred and was logged"
 
 
 # *************************************************************************************************
@@ -499,9 +501,50 @@ def add_content_to_chatTable(content: str, role: str, chatTable: List[Dict[str, 
         new_chatTable.append({"role": "assistant", "content": content})
     return new_chatTable
 
-def ask_question_gpt(question: str, role ="", max_tokens=1000, verbose = True) -> str:
+def ask_question_gpt(question: str, role ="", max_tokens=MAX_TOKEN_WINDOW_GPT35_TURBO, verbose = True) -> str:
     """
-    Queries OpenAI Instruct Model with a specific question. This has a better performance than getting a chat completion.
+    Queries OpenAI latest turbo 3.5 Model with a specific question.
+
+    Args:
+        question (str): The question to ask the model.
+        role (str, optional): As the legacy method would initialize a role, you can use previously defined role which will be part of the prompt.
+        max_tokens (int, optional): Maximum number of tokens to be for the completion - Knowing that total cannot exceed 16385 tokens and return is max 4096
+        verbose (bool, optional): Will print information in the console. Informations are the token cost and the instructions sent ChatGPT.
+    Returns:
+        str: The model's reply to the question.
+
+    Note:
+        If max_tokens is left to 1000, a print statement will recommand you to adjust it.
+    """
+    initial_token_usage = calculate_token(role) + calculate_token(question)
+    if initial_token_usage > MAX_TOKEN_WINDOW_GPT35_TURBO:
+        print("Your input is too large for the query regardless of the max_tokens for the reply.")
+        return ""
+    elif initial_token_usage + max_tokens > MAX_TOKEN_WINDOW_GPT35_TURBO:
+        print(f"Your input + the requested tokens for the answer exceed the maximum amount of {MAX_TOKEN_WINDOW_GPT35_TURBO}.\n Please adjust the max_tokens to a MAXIMUM of {MAX_TOKEN_WINDOW_GPT35_TURBO-initial_token_usage}")
+        return ""
+    if max_tokens == MAX_TOKEN_OUTPUT_DEFAULT:
+        print(f"""\nWarning: You are using default max_tokens of {MAX_TOKEN_OUTPUT_DEFAULT}.\n If you don't need that much, it will be faster and cheaper to reduce the max_tokens.\n
+              """)
+        max_request = max_tokens - initial_token_usage
+    else:
+        max_request = max_tokens
+    if role == "": instructions = question
+    else:
+        instructions = f"""You must follow strictly the Role to answer the Question.
+        \nRole = {role}
+        \n
+        Question = {question}
+        \nMake sure you take your time to understand the Role and follow the Role before answering the Question. Important: Answer ONLY the Question and nothing else.
+        """
+        initial_token_usage += 50
+    if verbose:
+        print(f"Completion ~ {max_tokens} tokens. Request ~ {initial_token_usage} tokens.\nInstructions provided to GPT are:\n{instructions}")
+    return request_gpt_instruct(instructions=instructions, max_tokens=max_request)
+
+def ask_question_gpt_instruct(question: str, role ="", max_tokens=MAX_TOKEN_OUTPUT_DEFAULT, verbose = True) -> str:
+    """
+    Queries OpenAI Instruct Model with a specific question. This had a better performance than getting a chat completion.
 
     Args:
         question (str): The question to ask the model.
@@ -513,16 +556,17 @@ def ask_question_gpt(question: str, role ="", max_tokens=1000, verbose = True) -
 
     Note:
         If max_tokens is left to 1000, a print statement will recommand you to adjust it.
+        Edit 8th of Nov - I believe the 3.5 new turbo is better than the instruct
     """
     initial_token_usage = calculate_token(role) + calculate_token(question)
-    if initial_token_usage > MAX_TOKEN_INPUT_OLD:
-        print("Your input is too large for the query. Use'new_chunk_text' to chunk the text beforehand.")
+    if initial_token_usage > MAX_TOKEN_WINDOW_GPT35_TURBO:
+        print("Your input is too large for the query regardless of the max_tokens for the reply.")
         return ""
-    if initial_token_usage + max_tokens > MAX_TOKEN_INPUT_OLD:
-        print(f"Your input + the requested tokens for the answer exceed the maximum amount of 4097.\n Please adjust the max_tokens to a MAXIMUM of {MAX_TOKEN_INPUT_OLD-initial_token_usage}")
+    elif initial_token_usage + max_tokens > MAX_TOKEN_WINDOW_GPT35_TURBO:
+        print(f"Your input + the requested tokens for the answer exceed the maximum amount of {MAX_TOKEN_WINDOW_GPT35_TURBO}.\n Please adjust the max_tokens to a MAXIMUM of {MAX_TOKEN_WINDOW_GPT35_TURBO-initial_token_usage}")
         return ""
-    if max_tokens == 1000:
-        print(f"""\nWarning: You are using default max_tokens.\n Your default response length is 750 words.\nIf you don't need that much, it will be faster and cheaper to reduce the max_tokens.\n
+    if max_tokens == MAX_TOKEN_OUTPUT_DEFAULT:
+        print(f"""\nWarning: You are using default max_tokens of {MAX_TOKEN_OUTPUT_DEFAULT}.\n If you don't need that much, it will be faster and cheaper to reduce the max_tokens.\n
               """)
         max_request = max_tokens - initial_token_usage
     else:
@@ -557,14 +601,13 @@ def ask_question_gpt4(role: str, question: str, model=MODEL_GPT4_TURBO, max_toke
         If max_tokens is set to 3000, a print statement will prompt you to adjust it.
         Verbose is set to False by default as context is generally very long in GPT4 which flods the console.
     """
-    maxi = MAX_TOKEN_INPUT_GPT4_TURBO if model == MODEL_GPT4_TURBO else MAX_TOKEN_INPUT_GPT4
+    maxi = MAX_TOKEN_WINDOW_GPT4_TURBO if model == MODEL_GPT4_TURBO else MAX_TOKEN_WINDOW_GPT4
     initial_token_usage = calculate_token(role) + calculate_token(question)
 
     if initial_token_usage > maxi:
-        print("Your input is too large for the query. Use'new_chunk_text' to chunk the text beforehand.")
+        print("Your input is too large for the query regardless of the max_tokens for the reply.")
         return ""
-    # Not sure the below actually happens - to check
-    if initial_token_usage + max_tokens > maxi:
+    elif initial_token_usage + max_tokens > maxi:
         print(f"Your input + the requested tokens for the answer exceed the maximum amount of {maxi}.\n Please adjust the max_tokens to a MAXIMUM of {maxi-initial_token_usage}")
         return ""
     if max_tokens == MAX_TOKEN_OUTPUT_DEFAULT_HUGE:
@@ -675,34 +718,6 @@ def check_if_gptconv_format(conversation: List[Dict[str, str]]) -> bool:
             return False
     return True
 
-def convert_gptconv_to_list_dicts(gpt_conversation: str) -> Optional[List[Dict]]:
-    """
-    Converts a gpt_conv to a list of dictionaries, making necessary replacements.
-    
-    Returns:
-        - List[Dict]: A list of dictionaries after processing the input string.
-        - None if issue
-    """
-    try:
-        # Remove control char and replace single quotes outside of the double quotes with double quotes
-        gpt_conversation = gpt_conversation.replace("\n", "\\n").replace("\t", "\\t").replace("\r", "\\r")
-        json_str = ''
-        inside_quotes = False
-        for char in gpt_conversation:
-            if char == '"' and not inside_quotes:
-                inside_quotes = True
-            elif char == '"' and inside_quotes:
-                inside_quotes = False
-
-            if char == "'" and not inside_quotes:
-                json_str += '"'
-            else:
-                json_str += char
-        return json.loads(remove_excess(json_str))
-    except Exception as e:
-        log_issue(e, convert_gptconv_to_list_dicts, f"For the conversation: {gpt_conversation}")
-        return None
-
 def embed_text(text: str, max_attempts: int = 3) -> List[float]:
     '''
     Micro function which returns the embedding of one chunk of text or 0 if issue.
@@ -724,25 +739,75 @@ def embed_text(text: str, max_attempts: int = 3) -> List[float]:
     log_issue(f"No answer despite {max_attempts} attempts", embed_text, "Open AI is down. Returning 0")
     return res
 
-def get_gptconv_readable_format(gpt_conversation: Union[str, List[Dict[str, str]]]) -> str:
+def get_gptconv_readable_format(gpt_conversation: str, system_message: bool = True) -> str:
     """
     Formats a string format GPT conversation (after being extracted from DB) in a human-friendly way.
+    If you don't want the system message, mention False. Default, we put it
 
     Returns:
-        - str: The formatted GPT conversation
+        - str: The formatted GPT conversation or Error message
     """
+    # guard clause
+    if not gpt_conversation or not isinstance(gpt_conversation, str): return "Failed to convert to a GPT conversation (not a valid string input)\n"
     try:
-        if isinstance(gpt_conversation, str):
-            gpt_conversation = convert_gptconv_to_list_dicts(gpt_conversation)
-        if not gpt_conversation or not isinstance(gpt_conversation, list):
-            return "Failed to convert the GPT conversation\n"
-        
-        formatted_lines = [f"{entry['role'].capitalize()}: {entry['content'].strip()}" for entry in gpt_conversation]
-
-        return '\n'.join(formatted_lines)
+        gpt_conv_as_list = []
+        # first, we add the system message
+        if system_message:
+            anchor_1 = gpt_conversation.find('"role": "system", "content":') # len 28 so 30 with the space
+            if anchor_1 == -1:
+                log_issue("Failed to convert to a GPT conversation", get_gptconv_readable_format, f"No system prompt - wrong format for the input {gpt_conversation}")
+                return ERROR_MESSAGE
+            anchor_2 = gpt_conversation.find('"role": "user", "content":') # len 26 so 28 with the space
+            anchor_2_alt = gpt_conversation.find('"role": "assistant", "content":') # len 31 so 33 with the space
+            
+            # only the system message
+            if anchor_2 == -1: 
+                print("Warning: Your GPT conversation only contains the system prompt")
+                return f"system: {gpt_conversation[anchor_1+30:-3].strip()}"
+            elif 0 < anchor_2 < anchor_2_alt or (0 < anchor_2 and anchor_2_alt == -1):
+                gpt_conv_as_list.append(["system", gpt_conversation[anchor_1+30:anchor_2-5].strip()]) # -5 comes from "}, {" of the next element
+            # Self-affirmation role
+            elif 0 < anchor_2_alt < anchor_2:
+                gpt_conv_as_list.append(["system", gpt_conversation[anchor_1+30:anchor_2_alt-5].strip()])
+            else:
+                log_issue("Failed to convert to a GPT conversation", get_gptconv_readable_format, f"Weird structure for the input {gpt_conversation}")
+                return ERROR_MESSAGE
+        while True:
+            anchor_1 = gpt_conversation.find('"role": "user", "content":') # len 26 so 28 with the space
+            anchor_2 = gpt_conversation.find('"role": "assistant", "content":') # len 31 so 33 with the space
+            if anchor_1 == -1:
+                if anchor_2 == -1:
+                    lprint()
+                    break
+                gpt_conv_as_list.append(["assistant", gpt_conversation[anchor_2+33:-3].strip()])
+                lprint()
+                break
+            elif anchor_2 == -1:
+                lprint()
+                gpt_conv_as_list.append(["user", gpt_conversation[anchor_1+28:-3].strip()])
+                lprint()
+                break
+            else:
+                if anchor_1 < anchor_2:
+                    # safety because sometimes we have several users in a row
+                    anchor_1_safety = gpt_conversation[anchor_1+29:].find('"role": "user", "content":')
+                    print(gpt_conversation)
+                    print(f"A1 {anchor_1}, A2 {anchor_2}, A1safe {anchor_1_safety}")
+                    anchor_2 = anchor_2 if anchor_2-anchor_1 < anchor_1_safety or anchor_1_safety == -1 else anchor_1_safety +34 # 29 + 5. 29 comes from searching the string after anchor_1 + 29. The 5 comes from the difference between anchor_2 (33) and anchor_1 (28)
+                    gpt_conv_as_list.append(["user", gpt_conversation[anchor_1+28:anchor_2-5].strip()]) # -5 comes from "}, {"
+                    gpt_conversation = gpt_conversation[anchor_2-5:]
+                else:
+                    # safety because we could have several assistants in a row
+                    anchor_2_safety = gpt_conversation[anchor_2+34:].find('"role": "assistant", "content":')
+                    anchor_1 = anchor_1 if anchor_1-anchor_2 < anchor_2_safety or anchor_2_safety == -1 else anchor_2_safety + 29 # 34 comes from searching the string after anchor_2 + 34 minus the difference between anchor_1 and anchor 2.
+                    gpt_conv_as_list.append(["assistant", gpt_conversation[anchor_2+33:anchor_1-5].strip()])
+                    gpt_conversation = gpt_conversation[anchor_1-5:]
+                    lprint()
+        result_string = '\n'.join(': '.join(pair) for pair in gpt_conv_as_list)
+        return result_string
     except Exception as e:
         log_issue(e, get_gptconv_readable_format, f"This was the input {gpt_conversation}")
-        return "An error occurred while formatting the GPT conversation."
+        return ERROR_MESSAGE
 
 def initialize_role_in_chatTable(role_definition: str) -> List[Dict[str, str]]:
     '''
