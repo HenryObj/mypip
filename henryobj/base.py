@@ -777,22 +777,16 @@ def get_gptconv_readable_format(gpt_conversation: str, system_message: bool = Tr
             anchor_2 = gpt_conversation.find('"role": "assistant", "content":') # len 31 so 33 with the space
             if anchor_1 == -1:
                 if anchor_2 == -1:
-                    lprint()
                     break
                 gpt_conv_as_list.append(["assistant", gpt_conversation[anchor_2+33:-3].strip()])
-                lprint()
                 break
             elif anchor_2 == -1:
-                lprint()
                 gpt_conv_as_list.append(["user", gpt_conversation[anchor_1+28:-3].strip()])
-                lprint()
                 break
             else:
                 if anchor_1 < anchor_2:
                     # safety because sometimes we have several users in a row
                     anchor_1_safety = gpt_conversation[anchor_1+29:].find('"role": "user", "content":')
-                    print(gpt_conversation)
-                    print(f"A1 {anchor_1}, A2 {anchor_2}, A1safe {anchor_1_safety}")
                     anchor_2 = anchor_2 if anchor_2-anchor_1 < anchor_1_safety or anchor_1_safety == -1 else anchor_1_safety +34 # 29 + 5. 29 comes from searching the string after anchor_1 + 29. The 5 comes from the difference between anchor_2 (33) and anchor_1 (28)
                     gpt_conv_as_list.append(["user", gpt_conversation[anchor_1+28:anchor_2-5].strip()]) # -5 comes from "}, {"
                     gpt_conversation = gpt_conversation[anchor_2-5:]
@@ -802,7 +796,6 @@ def get_gptconv_readable_format(gpt_conversation: str, system_message: bool = Tr
                     anchor_1 = anchor_1 if anchor_1-anchor_2 < anchor_2_safety or anchor_2_safety == -1 else anchor_2_safety + 29 # 34 comes from searching the string after anchor_2 + 34 minus the difference between anchor_1 and anchor 2.
                     gpt_conv_as_list.append(["assistant", gpt_conversation[anchor_2+33:anchor_1-5].strip()])
                     gpt_conversation = gpt_conversation[anchor_1-5:]
-                    lprint()
         result_string = '\n'.join(': '.join(pair) for pair in gpt_conv_as_list)
         return result_string
     except Exception as e:
