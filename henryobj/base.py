@@ -753,48 +753,48 @@ def get_gptconv_readable_format(gpt_conversation: str, system_message: bool = Tr
         gpt_conv_as_list = []
         # first, we add the system message
         if system_message:
-            anchor_1 = gpt_conversation.find('"role": "system", "content":') # len 28 so 30 with the space
+            anchor_1 = gpt_conversation.find("'role': 'system', 'content':") # len 28 so 30 with the space
             if anchor_1 == -1:
                 log_issue("Failed to convert to a GPT conversation", get_gptconv_readable_format, f"No system prompt - wrong format for the input {gpt_conversation}")
                 return ERROR_MESSAGE
-            anchor_2 = gpt_conversation.find('"role": "user", "content":') # len 26 so 28 with the space
-            anchor_2_alt = gpt_conversation.find('"role": "assistant", "content":') # len 31 so 33 with the space
+            anchor_2 = gpt_conversation.find("'role': 'user', 'content':") # len 26 so 28 with the space
+            anchor_2_alt = gpt_conversation.find("'role': 'assistant', 'content':") # len 31 so 33 with the space
             
             # only the system message
             if anchor_2 == -1: 
                 print("Warning: Your GPT conversation only contains the system prompt")
                 return f"system: {gpt_conversation[anchor_1+30:-3].strip()}"
             elif 0 < anchor_2 < anchor_2_alt or (0 < anchor_2 and anchor_2_alt == -1):
-                gpt_conv_as_list.append(["system", gpt_conversation[anchor_1+30:anchor_2-5].strip()]) # -5 comes from "}, {" of the next element
+                gpt_conv_as_list.append(['system', gpt_conversation[anchor_1+30:anchor_2-5].strip()]) # -5 comes from "}, {" of the next element
             # Self-affirmation role
             elif 0 < anchor_2_alt < anchor_2:
-                gpt_conv_as_list.append(["system", gpt_conversation[anchor_1+30:anchor_2_alt-5].strip()])
+                gpt_conv_as_list.append(['system', gpt_conversation[anchor_1+30:anchor_2_alt-5].strip()])
             else:
                 log_issue("Failed to convert to a GPT conversation", get_gptconv_readable_format, f"Weird structure for the input {gpt_conversation}")
                 return ERROR_MESSAGE
         while True:
-            anchor_1 = gpt_conversation.find('"role": "user", "content":') # len 26 so 28 with the space
-            anchor_2 = gpt_conversation.find('"role": "assistant", "content":') # len 31 so 33 with the space
+            anchor_1 = gpt_conversation.find("'role': 'user', 'content':") # len 26 so 28 with the space
+            anchor_2 = gpt_conversation.find("'role': 'assistant', 'content':") # len 31 so 33 with the space
             if anchor_1 == -1:
                 if anchor_2 == -1:
                     break
-                gpt_conv_as_list.append(["assistant", gpt_conversation[anchor_2+33:-3].strip()])
+                gpt_conv_as_list.append(['assistant', gpt_conversation[anchor_2+33:-3].strip()])
                 break
             elif anchor_2 == -1:
-                gpt_conv_as_list.append(["user", gpt_conversation[anchor_1+28:-3].strip()])
+                gpt_conv_as_list.append(['user', gpt_conversation[anchor_1+28:-3].strip()])
                 break
             else:
                 if anchor_1 < anchor_2:
                     # safety because sometimes we have several users in a row
-                    anchor_1_safety = gpt_conversation[anchor_1+29:].find('"role": "user", "content":')
+                    anchor_1_safety = gpt_conversation[anchor_1+29:].find("'role': 'user', 'content':")
                     anchor_2 = anchor_2 if anchor_2-anchor_1 < anchor_1_safety or anchor_1_safety == -1 else anchor_1_safety +34 # 29 + 5. 29 comes from searching the string after anchor_1 + 29. The 5 comes from the difference between anchor_2 (33) and anchor_1 (28)
-                    gpt_conv_as_list.append(["user", gpt_conversation[anchor_1+28:anchor_2-5].strip()]) # -5 comes from "}, {"
+                    gpt_conv_as_list.append(['user', gpt_conversation[anchor_1+28:anchor_2-5].strip()]) # -5 comes from "}, {"
                     gpt_conversation = gpt_conversation[anchor_2-5:]
                 else:
                     # safety because we could have several assistants in a row
-                    anchor_2_safety = gpt_conversation[anchor_2+34:].find('"role": "assistant", "content":')
+                    anchor_2_safety = gpt_conversation[anchor_2+34:].find("'role': 'assistant', 'content':")
                     anchor_1 = anchor_1 if anchor_1-anchor_2 < anchor_2_safety or anchor_2_safety == -1 else anchor_2_safety + 29 # 34 comes from searching the string after anchor_2 + 34 minus the difference between anchor_1 and anchor 2.
-                    gpt_conv_as_list.append(["assistant", gpt_conversation[anchor_2+33:anchor_1-5].strip()])
+                    gpt_conv_as_list.append(['assistant', gpt_conversation[anchor_2+33:anchor_1-5].strip()])
                     gpt_conversation = gpt_conversation[anchor_1-5:]
         result_string = '\n'.join(': '.join(pair) for pair in gpt_conv_as_list)
         return result_string
