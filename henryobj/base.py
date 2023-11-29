@@ -749,16 +749,27 @@ def get_gptconv_readable_format(gpt_conversation: str, system_message: bool = Tr
     """
     # guard clause
     if not gpt_conversation or not isinstance(gpt_conversation, str): return "Failed to convert to a GPT conversation (not a valid string input)\n"
+    def detect_quote_type(s: str) -> str:
+        if "\"role\": \"system\", \"content\":" in s:
+            return "\""
+        elif "'role': 'system', 'content':" in s:
+            return "'"
+        else:
+            return None
     try:
+        quote_type = detect_quote_type(gpt_conversation)
+        role_user = f"{quote_type}role{quote_type}: {quote_type}user{quote_type}, {quote_type}content{quote_type}:"
+        role_assistant = f"{quote_type}role{quote_type}: {quote_type}assistant{quote_type}, {quote_type}content{quote_type}:"
+        role_system = f"{quote_type}role{quote_type}: {quote_type}system{quote_type}, {quote_type}content{quote_type}:"
         gpt_conv_as_list = []
         # first, we add the system message
         if system_message:
-            anchor_1 = gpt_conversation.find("'role': 'system', 'content':") # len 28 so 30 with the space
+            anchor_1 = gpt_conversation.find(role_system) # len 28 so 30 with the space
             if anchor_1 == -1:
                 log_issue("Failed to convert to a GPT conversation", get_gptconv_readable_format, f"No system prompt - wrong format for the input {gpt_conversation}")
                 return ERROR_MESSAGE
-            anchor_2 = gpt_conversation.find("'role': 'user', 'content':") # len 26 so 28 with the space
-            anchor_2_alt = gpt_conversation.find("'role': 'assistant', 'content':") # len 31 so 33 with the space
+            anchor_2 = gpt_conversation.find(role_user) # len 26 so 28 with the space
+            anchor_2_alt = gpt_conversation.find(role_assistant) # len 31 so 33 with the space
             
             # only the system message
             if anchor_2 == -1: 
@@ -773,8 +784,8 @@ def get_gptconv_readable_format(gpt_conversation: str, system_message: bool = Tr
                 log_issue("Failed to convert to a GPT conversation", get_gptconv_readable_format, f"Weird structure for the input {gpt_conversation}")
                 return ERROR_MESSAGE
         while True:
-            anchor_1 = gpt_conversation.find("'role': 'user', 'content':") # len 26 so 28 with the space
-            anchor_2 = gpt_conversation.find("'role': 'assistant', 'content':") # len 31 so 33 with the space
+            anchor_1 = gpt_conversation.find(role_user) # len 26 so 28 with the space
+            anchor_2 = gpt_conversation.find(role_assistant) # len 31 so 33 with the space
             if anchor_1 == -1:
                 if anchor_2 == -1:
                     break
@@ -786,13 +797,13 @@ def get_gptconv_readable_format(gpt_conversation: str, system_message: bool = Tr
             else:
                 if anchor_1 < anchor_2:
                     # safety because sometimes we have several users in a row
-                    anchor_1_safety = gpt_conversation[anchor_1+29:].find("'role': 'user', 'content':")
+                    anchor_1_safety = gpt_conversation[anchor_1+29:].find(role_user)
                     anchor_2 = anchor_2 if anchor_2-anchor_1 < anchor_1_safety or anchor_1_safety == -1 else anchor_1_safety +34 # 29 + 5. 29 comes from searching the string after anchor_1 + 29. The 5 comes from the difference between anchor_2 (33) and anchor_1 (28)
                     gpt_conv_as_list.append(['user', gpt_conversation[anchor_1+28:anchor_2-5].strip()]) # -5 comes from "}, {"
                     gpt_conversation = gpt_conversation[anchor_2-5:]
                 else:
                     # safety because we could have several assistants in a row
-                    anchor_2_safety = gpt_conversation[anchor_2+34:].find("'role': 'assistant', 'content':")
+                    anchor_2_safety = gpt_conversation[anchor_2+34:].find(role_assistant)
                     anchor_1 = anchor_1 if anchor_1-anchor_2 < anchor_2_safety or anchor_2_safety == -1 else anchor_2_safety + 29 # 34 comes from searching the string after anchor_2 + 34 minus the difference between anchor_1 and anchor 2.
                     gpt_conv_as_list.append(['assistant', gpt_conversation[anchor_2+33:anchor_1-5].strip()])
                     gpt_conversation = gpt_conversation[anchor_1-5:]
