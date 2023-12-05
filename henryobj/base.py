@@ -653,7 +653,11 @@ def embed_text(text: str, max_attempts: int = 3) -> List[float]:
     attempts = 0
     while attempts < max_attempts:
         try:
-            res = openai.Embedding.create(input=text, engine=MODEL_EMB)['data'][0]['embedding']
+            res = client.embeddings.create(
+                model=MODEL_EMB,
+                input=text,
+                encoding_format="float"
+                ).data[0].embedding
             return res
         except Exception as e:
             if not check_co():
@@ -892,4 +896,4 @@ def self_affirmation_role(role_chatbot_in_text: str) -> str:
 # *************************************************************
 
 if __name__ == "__main__":
-    print(ask_question_gpt(question = "What is the meaning of life?", max_tokens=100))
+    pass
