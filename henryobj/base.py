@@ -503,123 +503,46 @@ def add_content_to_chatTable(content: str, role: str, chatTable: List[Dict[str, 
         new_chatTable.append({"role": "assistant", "content": content})
     return new_chatTable
 
-def ask_question_gpt(question: str, role ="", max_tokens=MAX_TOKEN_WINDOW_GPT35_TURBO, verbose = True) -> str:
+def ask_question_gpt(question: str, role: str = "", model: str = MODEL_CHAT, max_tokens: int = MAX_TOKEN_OUTPUT_DEFAULT, verbose: bool = True, json_on: bool = False) -> str:
     """
-    Queries OpenAI latest turbo 3.5 Model with a specific question.
+    Queries an OpenAI GPT model (GPT-3.5 Turbo or GPT-4) with a specific question.
 
     Args:
         question (str): The question to ask the model.
-        role (str, optional): As the legacy method would initialize a role, you can use previously defined role which will be part of the prompt.
-        max_tokens (int, optional): Maximum number of tokens to be for the completion - Knowing that total cannot exceed 16385 tokens and return is max 4096
-        verbose (bool, optional): Will print information in the console. Informations are the token cost and the instructions sent ChatGPT.
+        role (str, optional): System prompt to be initialized in the chat table, defining ChatGPT's behavior.
+        model (str, optional): The model to use. Defaults to GPT-3.5 Turbo. To choose GPT 4, use 'MODEL_GPT4_TURBO'
+        max_tokens (int, optional): Maximum number of tokens for the answer.
+        verbose (bool, optional): Will print information in the console.
+        json_on (bool, optional): Whether to force the output in JSON format // UNUSED FOR NOW
+
     Returns:
         str: The model's reply to the question.
-
-    Note:
-        If max_tokens is left to 1000, a print statement will recommand you to adjust it.
     """
+    max_token_window = {
+        MODEL_GPT4_TURBO: MAX_TOKEN_WINDOW_GPT4_TURBO,
+        MODEL_GPT4_STABLE: MAX_TOKEN_WINDOW_GPT4,
+        MODEL_CHAT: MAX_TOKEN_WINDOW_GPT35_TURBO,
+        MODEL_CHAT_STABLE: MAX_TOKEN_WINDOW_GPT35_TURBO,
+    }.get(model, MAX_TOKEN_WINDOW_OLD)
     initial_token_usage = calculate_token(role) + calculate_token(question)
-    if initial_token_usage > MAX_TOKEN_WINDOW_GPT35_TURBO:
+    if initial_token_usage > max_token_window:
         print("Your input is too large for the query regardless of the max_tokens for the reply.")
         return ""
-    elif initial_token_usage + max_tokens > MAX_TOKEN_WINDOW_GPT35_TURBO:
-        print(f"Your input + the requested tokens for the answer exceed the maximum amount of {MAX_TOKEN_WINDOW_GPT35_TURBO}.\n Please adjust the max_tokens to a MAXIMUM of {MAX_TOKEN_WINDOW_GPT35_TURBO-initial_token_usage}")
+    elif initial_token_usage + max_tokens > max_token_window:
+        max_tokens_adjusted = max_token_window - initial_token_usage
+        print(f"Your input + the requested tokens for the answer exceed the maximum amount of {max_token_window}.\n Please adjust the max_tokens to a MAXIMUM of {max_tokens_adjusted}")
         return ""
-    if max_tokens == MAX_TOKEN_OUTPUT_DEFAULT:
-        print(f"""\nWarning: You are using default max_tokens of {MAX_TOKEN_OUTPUT_DEFAULT}.\n If you don't need that much, it will be faster and cheaper to reduce the max_tokens.\n
-              """)
-        max_request = max_tokens - initial_token_usage
-    else:
-        max_request = max_tokens
-    if role == "": instructions = question
-    else:
-        instructions = f"""You must follow strictly the Role to answer the Question.
-        \nRole = {role}
-        \n
-        Question = {question}
-        \nMake sure you take your time to understand the Role and follow the Role before answering the Question. Important: Answer ONLY the Question and nothing else.
-        """
-        initial_token_usage += 50
-    if verbose:
-        print(f"Completion ~ {max_tokens} tokens. Request ~ {initial_token_usage} tokens.\nInstructions provided to GPT are:\n{instructions}")
-    return request_gpt_instruct(instructions=instructions, max_tokens=max_request)
-
-def ask_question_gpt_instruct(question: str, role ="", max_tokens=MAX_TOKEN_OUTPUT_DEFAULT, verbose = True) -> str:
-    """
-    Queries OpenAI Instruct Model with a specific question. This had a better performance than getting a chat completion.
-
-    Args:
-        question (str): The question to ask the model.
-        role (str, optional): As the legacy method would initialize a role, you can use previously defined role which will be part of the prompt.
-        max_tokens (int, optional): Maximum number of tokens to be for the completion - Knowing that total cannot exceed 4097
-        verbose (bool, optional): Will print information in the console. Informations are the token cost and the instructions sent ChatGPT.
-    Returns:
-        str: The model's reply to the question.
-
-    Note:
-        If max_tokens is left to 1000, a print statement will recommand you to adjust it.
-        Edit 8th of Nov - I believe the 3.5 new turbo is better than the instruct
-    """
-    initial_token_usage = calculate_token(role) + calculate_token(question)
-    if initial_token_usage > MAX_TOKEN_WINDOW_GPT35_TURBO:
-        print("Your input is too large for the query regardless of the max_tokens for the reply.")
-        return ""
-    elif initial_token_usage + max_tokens > MAX_TOKEN_WINDOW_GPT35_TURBO:
-        print(f"Your input + the requested tokens for the answer exceed the maximum amount of {MAX_TOKEN_WINDOW_GPT35_TURBO}.\n Please adjust the max_tokens to a MAXIMUM of {MAX_TOKEN_WINDOW_GPT35_TURBO-initial_token_usage}")
-        return ""
-    if max_tokens == MAX_TOKEN_OUTPUT_DEFAULT:
-        print(f"""\nWarning: You are using default max_tokens of {MAX_TOKEN_OUTPUT_DEFAULT}.\n If you don't need that much, it will be faster and cheaper to reduce the max_tokens.\n
-              """)
-        max_request = max_tokens - initial_token_usage
-    else:
-        max_request = max_tokens
-    if role == "": instructions = question
-    else:
-        instructions = f"""You must follow strictly the Role to answer the Question.
-        \nRole = {role}
-        \n
-        Question = {question}
-        \nMake sure you take your time to understand the Role and follow the Role before answering the Question. Important: Answer ONLY the Question and nothing else.
-        """
-        initial_token_usage += 50
-    if verbose:
-        print(f"Completion ~ {max_tokens} tokens. Request ~ {initial_token_usage} tokens.\nInstructions provided to GPT are:\n{instructions}")
-    return request_gpt_instruct(instructions=instructions, max_tokens=max_request)
-
-def ask_question_gpt4(role: str, question: str, model=MODEL_GPT4_TURBO, max_tokens=MAX_TOKEN_OUTPUT_DEFAULT_HUGE, verbose = False, json_on=False) -> str:
-    """
-    Queries Chat GPT 4 with a specific question. 
-
-    Args:
-        role (str): The system prompt to be initialized in the chat table. How you want ChatGPT to behave.
-        question (str): The question to ask the model.
-        model (str, optional): The model to use. Defaults to GPT4. Althought it says GPT4, you can use the ChatModel
-        max_tokens (int, optional): Maximum number of tokens for the answer. Default is 3000 which is huge.
-        verbose (bool, optional): Will print information in the console. Informations are the token cost and the instructions sent ChatGPT.
-    Returns:
-        str: The model's reply to the question.
-
-    Note:
-        If max_tokens is set to 3000, a print statement will prompt you to adjust it.
-        Verbose is set to False by default as context is generally very long in GPT4 which flods the console.
-    """
-    maxi = MAX_TOKEN_WINDOW_GPT4_TURBO if model == MODEL_GPT4_TURBO else MAX_TOKEN_WINDOW_GPT4
-    initial_token_usage = calculate_token(role) + calculate_token(question)
-
-    if initial_token_usage > maxi:
-        print("Your input is too large for the query regardless of the max_tokens for the reply.")
-        return ""
-    elif initial_token_usage + max_tokens > maxi:
-        print(f"Your input + the requested tokens for the answer exceed the maximum amount of {maxi}.\n Please adjust the max_tokens to a MAXIMUM of {maxi-initial_token_usage}")
-        return ""
-    if max_tokens == MAX_TOKEN_OUTPUT_DEFAULT_HUGE:
-        print(f"""\nWarning: You are using default max_tokens.\n Your default response length is 2500 words. This will likely take a lot of time to process!!\nIf you don't need that much, it will be faster and cheaper to reduce the max_tokens.\n
-              """)
     current_chat = initialize_role_in_chatTable(role)
     current_chat = add_content_to_chatTable(question, "user", current_chat)
     if verbose:
-        print(f"Completion ~ {max_tokens} tokens. Request ~ {initial_token_usage} tokens.\Context provided to GPT is:\n{current_chat}")
-    return request_chatgpt(current_chat, max_tokens=max_tokens, model=model, json_on=False)
+        print(f"Completion ~ {max_tokens} tokens. Request ~ {initial_token_usage} tokens.\nContext provided to GPT is:\n{current_chat}")
+    return request_chatgpt(current_chat, max_tokens=max_tokens, model=model, json_on=json_on)
+
+def ask_question_gpt4(question: str, role: str, model=MODEL_GPT4_TURBO, max_tokens=MAX_TOKEN_OUTPUT_DEFAULT_HUGE, verbose = False, json_on=False) -> str:
+    """
+    Queries Chat GPT 4 with a specific question if too lazy to change the param in ask_question_gpt)
+    """
+    return ask_question_gpt(question = question, role = role, model = model, max_tokens= max_tokens, verbose=verbose, json_on=json_on)
 
 def calculate_token(text: str) -> int:
     """
@@ -895,9 +818,8 @@ def request_chatgpt(current_chat: list, max_tokens: int, stop_list=False, max_at
                 presence_penalty=0,
                 stop=stop,
                 model= model,
-                #response_format=  - for now it doesn't work
             )
-            rep = response["choices"][0]["message"]["content"]
+            rep = response.choices[0].message.content
             rep = rep.strip()
             valid = True
         except Exception as e:
@@ -910,50 +832,6 @@ def request_chatgpt(current_chat: list, max_tokens: int, stop_list=False, max_at
                 print(f"Error. This is attempt number {attempts}/{max_attempts}. The exception is {e}. Trying again")
     if rep == OPEN_AI_ISSUE and check_co():
         print(f" ** We have an issue with Open AI using the model {model}")
-        log_issue(f"No answer despite {max_attempts} attempts", request_chatgpt, "Open AI is down")
-    else:
-        return rep
-
-def request_gpt_instruct(instructions: str, max_tokens=300, max_attempts=3, temperature=0, top_p=1) -> str:
-    '''
-    Calls the OpenAI completion endpoint with specified parameters.
-
-    Args:
-        instructions (str): The prompt used for the request.
-        max_tokens (int): The maximum number of tokens in the reply - defaulted to 300 (200 words)
-        max_attempts (int, optional): Maximum number of retries. Defaults to 3.
-        temperature (float, optional): Sampling temperature for the response. A value of 0 means deterministic output. Defaults to 0.
-        top_p (float, optional): Nucleus sampling parameter, with 1 being 'take the best'. Defaults to 1.
-
-    Returns:
-        str: The response text or 'OPEN_AI_ISSUE' if an error occurs (e.g., if OpenAI service is down).
-    '''
-    attempts = 0
-    valid = False
-    while attempts < max_attempts and not valid:
-        try:
-            rep = client.chat.completions.create(
-                    model = MODEL_INSTRUCT,
-                    prompt = instructions,
-                    temperature = temperature,
-                    max_tokens = max_tokens,
-                    top_p =top_p,
-                    frequency_penalty=0,
-                    presence_penalty=0
-                )
-            rep = rep["choices"][0]["text"].strip()
-            valid = True
-        except Exception as e:
-            attempts += 1
-            rep = OPEN_AI_ISSUE
-            if 'Rate limit reached' in e:
-                print(f"Rate limit reached. We will slow down and sleep for 300ms. This was attempt number {attempts}/{max_attempts}")
-                time.sleep(0.3)
-            else:
-                print(f"Error. This is attempt number {attempts}/{max_attempts}. The exception is {e}. Trying again")
-                rep = OPEN_AI_ISSUE
-    if rep == OPEN_AI_ISSUE and check_co():
-        print(f" ** We have an issue with Open AI using the model {MODEL_INSTRUCT}")
         log_issue(f"No answer despite {max_attempts} attempts", request_chatgpt, "Open AI is down")
     else:
         return rep
@@ -1014,4 +892,4 @@ def self_affirmation_role(role_chatbot_in_text: str) -> str:
 # *************************************************************
 
 if __name__ == "__main__":
-    pass
+    print(ask_question_gpt(question = "What is the meaning of life?", max_tokens=100))
