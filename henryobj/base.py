@@ -26,7 +26,9 @@ from collections import Counter
 # ****** PATHS & GLOBAL VARIABLES *******
 
 OAI_KEY = os.getenv("OAI_API_KEY")
-openai.api_key = OAI_KEY
+client = openai.OpenAI(
+    api_key=os.environ.get("OPENAI_API_KEY"),
+)
 
 # ****** TOKEN LIMITATIONS
 MAX_TOKEN_OUTPUT = 4096
@@ -884,7 +886,7 @@ def request_chatgpt(current_chat: list, max_tokens: int, stop_list=False, max_at
     #print("Writing the reply for ", current_chat) # Remove in production - to see what is actually fed as a prompt
     while attempts < max_attempts and not valid:
         try:
-            response = openai.ChatCompletion.create(
+            response = client.chat.completions.create(
                 messages= current_chat,
                 temperature=temperature,
                 max_tokens= int(max_tokens),
@@ -930,7 +932,7 @@ def request_gpt_instruct(instructions: str, max_tokens=300, max_attempts=3, temp
     valid = False
     while attempts < max_attempts and not valid:
         try:
-            rep = openai.Completion.create(
+            rep = client.chat.completions.create(
                     model = MODEL_INSTRUCT,
                     prompt = instructions,
                     temperature = temperature,
