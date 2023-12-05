@@ -27,7 +27,7 @@ from collections import Counter
 
 OAI_KEY = os.getenv("OAI_API_KEY")
 client = openai.OpenAI(
-    api_key=os.environ.get("OPENAI_API_KEY"),
+    api_key=OAI_KEY,
 )
 
 # ****** TOKEN LIMITATIONS
