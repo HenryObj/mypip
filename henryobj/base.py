@@ -769,11 +769,12 @@ def print_gpt_models():
         name = elem["id"]
         if "gpt" in name or "embedding" in name: print(name)
 
-def print_gptconv_nicely(gpt_conversation: str) -> None:
+def print_gptconv_nicely(gpt_conversation: str, system_message: bool = True) -> None:
     """
     Prints a string format GPT conversation (after being extracted from DB) in a human-friendly way.
+    Assumes there is a system message. 
     """
-    print(get_gptconv_readable_format(gpt_conversation))
+    print(get_gptconv_readable_format(gpt_conversation, system_message))
 
 # For local tests
 def print_len_token_price(file_path_or_text, Embed = False):
