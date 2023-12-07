@@ -182,6 +182,16 @@ def lprint(*args: Any):
     else:
         print(f"Line {line_number}: {args}")
 
+# local tests
+def fprint(func: Callable[..., Any], additional_info: str = ""):
+    '''
+    Custom print function to display what is going on a given line of a given module. Used for verbose.
+    '''
+    caller_frame = inspect.stack()[1][0]
+    line_number = caller_frame.f_lineno
+    module_name = get_module_name(func)
+    print(f"** LOG ** {line_number} of {module_name} ** INFO: {additional_info}")
+    
 def new_chunk_text(text: str, target_token: int = 200) -> List[str]:
     '''
     Much simpler function to chunk the text in blocks by spliting by sentence. The last chunk might be small.
