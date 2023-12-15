@@ -840,7 +840,8 @@ def request_chatgpt(current_chat: list, max_tokens: int, stop_list=False, max_at
         except Exception as e:
             rep = OPEN_AI_ISSUE
             attempts += 1
-            if 'Rate limit reached' in e:
+            error_message = str(e)
+            if 'Rate limit reached' in error_message:
                 print(f"Rate limit reached. We will slow down and sleep for 300ms. This was attempt number {attempts}/{max_attempts}")
                 time.sleep(0.3)
             else:
