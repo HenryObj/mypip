@@ -445,7 +445,7 @@ def request_chatgpt(current_chat: list, max_tokens: int, stop_list=False, max_at
 
     Args:
         current_chat (list): The prompt used for the request.
-        max_tokens (int): The maximum number of tokens to be used in the context (context = reply + question and role)
+        max_tokens (int, optional): Maximum number of tokens for the answer.
         stop_list (bool, optional): Whether to use specific stop tokens. Defaults to False.
         max_attempts (int, optional): Maximum number of retries. Defaults to 3.
         model (str, optional): ChatGPT OpenAI model used for the request. Defaults to 'MODEL_CHAT'.
@@ -498,7 +498,4 @@ def request_chatgpt(current_chat: list, max_tokens: int, stop_list=False, max_at
 # *************************************************************
 
 if __name__ == "__main__":
-    openai.chat.completions.create(
-
-
-    )
+    pass

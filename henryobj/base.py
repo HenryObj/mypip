@@ -28,6 +28,12 @@ from collections import Counter
 # *************************************************************************************************
 # *************************************** General Utilities ***************************************
 # *************************************************************************************************
+def check__if_password_safe(password: str) -> bool:
+    """
+    Checks if a password is composed of regular chars or not.
+    """
+    if not isinstance(password, str): return False
+    return bool(re.match(r'^[a-zA-Z0-9$*&@#%!=+,.:;<>?[\]^_`{|}~"-]+$', password))
 
 def clean_punctuation(text: str) -> str:
     '''
