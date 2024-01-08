@@ -25,5 +25,5 @@ If not already installed, this module will install the following packages and th
 
 November 2023: Added the latest models from Open AI and added a func to extract the conversation in a clean manner even with nested json.
 
-September 2023: (Removed in 2024) We are now using Chat-GPT-Instruct when "asking a question" to GPT. This is faster and more performant than queriying the Chat Model (3.5 turbo).
+September 2023: (Removed in 2024) We are using Chat-GPT-Instruct when "asking a question" to GPT.
 
