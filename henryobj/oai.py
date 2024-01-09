@@ -445,7 +445,7 @@ def embed_text(text: str, max_attempts: int = 3) -> List[float]:
     log_issue(f"No answer despite {max_attempts} attempts", embed_text, "Open AI is down. Returning 0")
     return res
 
-def request_chatgpt(current_chat: list, max_tokens: int, stop_list=False, max_attempts=3, model=MODEL_CHAT, temperature=0, top_p=1, json_on=False):
+def request_chatgpt(current_chat: list, max_tokens: int, stop_list=False, max_attempts=3, model=MODEL_CHAT, temperature=0, top_p=1, json_on=False) -> str:
     """
     Calls the ChatGPT OpenAI completion endpoint with specified parameters.
 
@@ -470,6 +470,7 @@ def request_chatgpt(current_chat: list, max_tokens: int, stop_list=False, max_at
     stop = stop_list if (stop_list and len(stop_list) < 4) else ""
     attempts = 0
     valid = False
+    rep = OPEN_AI_ISSUE
     #print("Writing the reply for ", current_chat) # Remove in production - to see what is actually fed as a prompt
     while attempts < max_attempts and not valid:
         try:
@@ -487,7 +488,6 @@ def request_chatgpt(current_chat: list, max_tokens: int, stop_list=False, max_at
             rep = rep.strip()
             valid = True
         except Exception as e:
-            rep = OPEN_AI_ISSUE
             attempts += 1
             error_message = str(e)
             if 'Rate limit reached' in error_message:
@@ -498,8 +498,7 @@ def request_chatgpt(current_chat: list, max_tokens: int, stop_list=False, max_at
     if rep == OPEN_AI_ISSUE and check_co():
         print(f" ** We have an issue with Open AI using the model {model}")
         log_issue(f"No answer despite {max_attempts} attempts", request_chatgpt, "Open AI is down")
-    else:
-        return rep
+    return rep
     
 # *************************************************************
 
