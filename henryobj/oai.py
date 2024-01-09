@@ -342,16 +342,22 @@ def retry_if_too_short(func, *args, **kwargs):
             return result
     return None
 
-def sanitize_bad_gpt_output(gpt_output: str) -> str:
+def sanitize_bad_gpt_output(gpt_output: str, model = None) -> str:
     """
     Sanitize bad outputs made by GPT according to bad output we already saw.
 
+    Args:
+    - model: Optional. Allows to add other checks that are specifics to the use case.
+
     Returns:
-        - str: The cleaned gpt_output - always strip() the input
+    - str: The cleaned gpt_output - always strip() the input
     """
     # Check for starting with the assistant prefixes
     if gpt_output.startswith(("Assistant: ", "assistant: ")):
         gpt_output = gpt_output[11:]
+    if model == 'spar':
+        if gpt_output.startswith(("Client: ", "client: ")):
+            gpt_output = gpt_output[8:]
     # Check for starting and ending with single or double quotes
     if (gpt_output.startswith("'") and gpt_output.endswith("'")) or (gpt_output.startswith('"') and gpt_output.endswith('"')):
         gpt_output = gpt_output[1:-1]
