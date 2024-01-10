@@ -3,7 +3,7 @@
 
 This module is to simplify the access to utility functions I use in various codebases. Feel free to use it and suggest improvements 🤝
 
-## Last Update - 8th of January 2024
+## Last Update - 10th of January 2024
 WIP: Adding the OAI assistants in this package
 
 ## What is in this package?

@@ -1,5 +1,4 @@
 /__pycache__/
-tester/
 venv/
 build/
 dist/
@@ -9,3 +8,4 @@ update.sh
 henryobj/__pycache__/
 kinm/
 /old
+test*

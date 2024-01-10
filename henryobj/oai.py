@@ -351,13 +351,19 @@ def sanitize_bad_gpt_output(gpt_output: str, model = None) -> str:
 
     Returns:
     - str: The cleaned gpt_output - always strip() the input
+
+    Note:
+    - Currently has: 'spar_client', 'spar_sales' and 'spar' as optional filters
     """
     # Check for starting with the assistant prefixes
     if gpt_output.startswith(("Assistant: ", "assistant: ")):
         gpt_output = gpt_output[11:]
-    if model == 'spar':
+    if model in ['spar_client', 'spar']:
         if gpt_output.startswith(("Client: ", "client: ")):
             gpt_output = gpt_output[8:]
+    if model in ['spar_sales', 'spar']:
+        if gpt_output.startswith(("Salesperson: ", "salesperson: ")):
+            gpt_output = gpt_output[13:]
     # Check for starting and ending with single or double quotes
     if (gpt_output.startswith("'") and gpt_output.endswith("'")) or (gpt_output.startswith('"') and gpt_output.endswith('"')):
         gpt_output = gpt_output[1:-1]
