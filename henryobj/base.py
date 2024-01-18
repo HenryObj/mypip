@@ -5,7 +5,7 @@
     @LastModif:             Wednesday 22nd of November 2023
     @Filename:				base.py
     @Purpose                All the utility functions
-    @Partof                 pip package
+    @Partof                 PIP package
 """
 
 # ************** IMPORTS ****************
@@ -15,7 +15,7 @@ import datetime
 import inspect
 import tiktoken
 import json
-from typing import Callable, Any, Union, List, Dict, Optional
+from typing import Callable, Any, Union, List, Dict, Optional, Tuple
 import re
 import time
 from urllib.parse import urlparse, urlunparse, quote, unquote
@@ -117,6 +117,12 @@ def get_content_of_file(file_path : str) -> str:
     with open(file_path,"r") as file:
         x = file.read()
     return x
+
+def get_current_dir():
+    """
+    Returns the directory of the current module.
+    """
+    return os.path.dirname(os.path.abspath(__file__))
 
 def get_module_name(func: Callable[..., Any]) -> str:
     '''

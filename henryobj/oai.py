@@ -5,7 +5,7 @@
     @LastModif:             Friday 5th of January 2024
     @Filename:				oai.py
     @Purpose                All the functions to deal with OAI library
-    @Partof                 pip package
+    @Partof                 PIP package
 """
 
 from .base import *
@@ -506,7 +506,8 @@ def request_chatgpt(current_chat: list, max_tokens: int, stop_list=False, max_at
         log_issue(f"No answer despite {max_attempts} attempts", request_chatgpt, "Open AI is down")
     return rep
     
-# *************************************************************
+# *************************************************************************************************
+# *************************************************************************************************
 
 if __name__ == "__main__":
     pass
