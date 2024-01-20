@@ -31,25 +31,30 @@ def contains_code(file_path: str) -> bool:
 
 def joining_and_summarizing_modules(repository_path: str) -> str:
     """
-    Open the modules and append them together to create the code context.
-
-    Note:
-        This is a V1. We didn't do the summarizing yet.
+    Process the modules in the repository and subdirectories to create the code context.
     """
-    result = ""
-    total_token = 0
-    for file in os.listdir(repository_path):
-        if contains_code(file):
-            with open(os.path.join(repository_path, file), "r") as doc:
-                content = doc.read()
-            total_token += calculate_token(content)
-            if total_token < MAX_TOKEN_WINDOW_GPT4_TURBO - BUFFER_README_INPUT:
-                result += f"\n### START OF {file}###\n" + doc.read() + f"\n### END OF {file}###\n\n"
-            else:
-                # file is too long - we need a logic to chunk and summarize in the V2
-                print("Sorry the repo is too large to do a ReadME")
-                return ""
+    result, _ = process_directory(repository_path, "", 0)
     return result
+
+def process_directory(directory_path: str, result: str, total_token: int) -> tuple:
+    """
+    Recursively process directories and files within the given path.
+    """
+    for entry in os.listdir(directory_path):
+        full_path = os.path.join(directory_path, entry)
+        if os.path.isdir(full_path):
+            result, total_token = process_directory(full_path, result, total_token)
+        elif contains_code(full_path):
+            with open(full_path, "r") as doc:
+                content = doc.read()
+            file_token_count = calculate_token(content)
+            if total_token + file_token_count < MAX_TOKEN_WINDOW_GPT4_TURBO - BUFFER_README_INPUT:
+                result += f"\n### START OF {entry} ###\n" + content + f"\n### END OF {entry} ###\n\n"
+                total_token += file_token_count
+            else:
+                print("Repo is too large for a single README. Consider breaking down the content.")
+                return result, total_token
+    return result, total_token
 
 # *************************************************************************************************
 # ****************************************** GPT FUNCS ********************************************
@@ -63,9 +68,9 @@ def gpt_readme_generator(repository_path: str) -> str:
         This is a V1 as such, some features are not working (long repo) and we only query GPT 4 once so quality may be low.
     """
     get_code_content = joining_and_summarizing_modules(repository_path)
-    first_readme_result = ask_question_gpt4(question = get_code_content, role = ROLE_README_GENERATOR)
+    first_readme_result = ask_question_gpt4(question=get_code_content, role=ROLE_README_GENERATOR)
     role_reviewer = generate_role_readme_reviewer(first_readme_result)
-    improved_result = ask_question_gpt4(question=get_code_content, role= role_reviewer)
+    improved_result = ask_question_gpt4(question=first_readme_result, role=role_reviewer)
     return improved_result
 
 def gpt_generate_readme(repository_path: str, verbose = True) -> None:
@@ -76,8 +81,8 @@ def gpt_generate_readme(repository_path: str, verbose = True) -> None:
         We add a timestamp after the README to avoid overwritting existing file.
     """
     new_readme = gpt_readme_generator(repository_path)
-    now = get_now(True)
-    with open(os.path.join(repository_path, f"README_{now}.md", "w")) as file:
+    now = get_now()
+    with open(os.path.join(repository_path, f"README_{now}.md"), "w") as file:
         file.write(new_readme)
     if verbose: print("✅ README.md file generated")
 
