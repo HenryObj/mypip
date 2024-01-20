@@ -11,10 +11,13 @@
 
 # ************** IMPORTS ****************
 from .oai import *
+import sys
+import threading
 
 # ****** PATHS & GLOBAL VARIABLES *******
 
 BUFFER_README_INPUT = 30000
+LARGE_INPUT_THRESHOLD = 10000  # Threshold for considering an input as large
 
 # *************************************************************************************************
 # *************************************** SUPPORT FUNCS *******************************************
@@ -45,6 +48,7 @@ def process_directory(directory_path: str, result: str, total_token: int) -> tup
         if os.path.isdir(full_path):
             result, total_token = process_directory(full_path, result, total_token)
         elif contains_code(full_path):
+            print(f"Processing the file {entry}")
             with open(full_path, "r") as doc:
                 content = doc.read()
             file_token_count = calculate_token(content)
@@ -55,6 +59,18 @@ def process_directory(directory_path: str, result: str, total_token: int) -> tup
                 print("Repo is too large for a single README. Consider breaking down the content.")
                 return result, total_token
     return result, total_token
+
+def progress_indicator(message: str):
+    """
+    Display a dynamic progress indicator in the console.
+    """
+    for _ in range(10):
+        for phase in [".   ", "..  ", "... "]:
+            sys.stdout.write("\r" + message + phase)
+            sys.stdout.flush()
+            time.sleep(1)
+    sys.stdout.write("\r" + " " * (len(message) + 5) + "\r")  # Clear line
+    sys.stdout.flush()
 
 # *************************************************************************************************
 # ****************************************** GPT FUNCS ********************************************
@@ -68,9 +84,19 @@ def gpt_readme_generator(repository_path: str) -> str:
         This is a V1 as such, some features are not working (long repo) and we only query GPT 4 once so quality may be low.
     """
     get_code_content = joining_and_summarizing_modules(repository_path)
+    query_message = "Querying GPT 4"
+    if calculate_token(get_code_content) > LARGE_INPUT_THRESHOLD:
+        query_message = "Querying GPT4. The repo is a large input so this might take some time, please wait"
+
+    # Start a separate thread for the progress indicator
+    progress_thread = threading.Thread(target=progress_indicator, args=(query_message,))
+    progress_thread.start()
+
     first_readme_result = ask_question_gpt4(question=get_code_content, role=ROLE_README_GENERATOR)
     role_reviewer = generate_role_readme_reviewer(first_readme_result)
     improved_result = ask_question_gpt4(question=first_readme_result, role=role_reviewer)
+
+    progress_thread.join()  # Wait for the progress indicator to finish
     return improved_result
 
 def gpt_generate_readme(repository_path: str, verbose = True) -> None:
@@ -82,9 +108,12 @@ def gpt_generate_readme(repository_path: str, verbose = True) -> None:
     """
     new_readme = gpt_readme_generator(repository_path)
     now = get_now()
-    with open(os.path.join(repository_path, f"README_{now}.md"), "w") as file:
+    readme_path = os.path.join(repository_path, f"README_{now}.md")
+    with open(readme_path, "w") as file:
         file.write(new_readme)
-    if verbose: print("✅ README.md file generated")
+    if verbose:
+        print(f"✅ ReadMe is completed and available here 👉 {readme_path}")
+
 
 # *************************************************************************************************
 # ****************************************** PROMPTS **********************************************
