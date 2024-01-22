@@ -76,12 +76,50 @@ def progress_indicator(message: str):
 # ****************************************** GPT FUNCS ********************************************
 # *************************************************************************************************
 
+def gpt_bugbounty_generator(repository_path: str) -> str:
+    """
+    Enter the path of the repo and we will return a report of all possible bugs in it.
+
+    Note:
+        We query GPT-4 twice to improve the quality. We do not deal with large repo (for now)
+    """
+    get_code_content = joining_and_summarizing_modules(repository_path)
+    query_message = "Querying GPT 4"
+    if calculate_token(get_code_content) > LARGE_INPUT_THRESHOLD:
+        query_message = "Querying GPT4. The repo is a large input so this might take some time, please wait"
+
+    # Start a separate thread for the progress indicator
+    progress_thread = threading.Thread(target=progress_indicator, args=(query_message,))
+    progress_thread.start()
+
+    first_bb_result = ask_question_gpt4(question=get_code_content, role=ROLE_BUG_BOUNTY)
+    role_reviewer = generate_role_bug_bounty_reviewer(first_bb_result)
+    improved_result = ask_question_gpt4(question=first_bb_result, role=role_reviewer)
+
+    progress_thread.join()  # Wait for the progress indicator to finish
+    return improved_result
+
+def gpt_generate_bb_report(repository_path: str, verbose = True) -> None:
+    """
+    Take the repo path as an input and generate a new BB_Report in the repo. 
+    
+    Note: 
+        We add a timestamp after the BugBounty Report (BB_Report) to avoid overwritting existing file.
+    """
+    new_readme = gpt_readme_generator(repository_path)
+    now = get_now()
+    readme_path = os.path.join(repository_path, f"BB_Report_{now}.md")
+    with open(readme_path, "w") as file:
+        file.write(new_readme)
+    if verbose:
+        print(f"✅ ReadMe is completed and available here 👉 {readme_path}")
+
 def gpt_readme_generator(repository_path: str) -> str:
     """
     Enter the path of the repo and we will return the content of the ReadMe file.
 
     Note:
-        This is a V1 as such, some features are not working (long repo) and we only query GPT 4 once so quality may be low.
+        We query GPT-4 twice to improve the quality. We do not deal with large repo (for now)
     """
     get_code_content = joining_and_summarizing_modules(repository_path)
     query_message = "Querying GPT 4"
@@ -180,7 +218,7 @@ README File:
 ### Important Notes ###
 1. You will be tipped $200 for the best and most comprehensive README.md file.
 2. My job depends on the quality of the output so you MUST be exhaustive.
-3. Only return the content of the file with the Markdown format, and nothing else.
+3. Do not give your opinion and ONLY return the full README content with Markdown format, nothing else. 
 """
 
 def generate_role_readme_reviewer(current_readme: str) -> str:
@@ -209,8 +247,89 @@ def generate_role_readme_reviewer(current_readme: str) -> str:
     ### Important Notes ###
     1. You will be tipped $200 for the best and most comprehensive README.md file.
     2. My job depends on the quality of the output so you MUST be exhaustive.
-    3. Only return the content of the file with the Markdown format, and nothing else.
+    3. Do not give your opinion and ONLY return the full README content with Markdown format, nothing else.
     """)
+
+ROLE_BUG_BOUNTY = """
+You are the best CTO with decades of experiences in computer science. You follow best practices, you pay close attention to details and you are highly rigorous.
+
+$$$ Instructions $$$
+1. Think step by step.
+2. Analyze the provided codebase, paying close attention to each module.
+2. For each module:
+   - Note any dependencies or important interactions with other functions.
+   - Assess if the code has any logical, typo, or syntax issues. You MUST take note of everything that can lead to a bug.
+   - Important: You do NOT care about imports and functions that are mentioned but not defined.
+3. After assessing all modules and all interactions between functions, write following Markdown formatting:
+   - The correction needed for each function.
+   - Any concrete and specific recommendation to make the code more robust.
+
+$$$ Example of Input $$$
+*** file app.py ***
+// Python code for Fast API endpoint
+@app.route("/knowledge/<id_client>")
+def knowledge(id_client):
+    connection = open_connection() # CON OPEN
+    log_visit_in_app(connection, id_client, "knowledge") #logvisit
+    credits = get_credits(connection, id_client)
+    knowledge = get_all_knowledge(connection, id_client)
+    know = []
+    if not knowledge.empty:
+    for index, row in knowledge.iterrows():
+            know.append((row[0], row[1], row[2], row[4]))
+    return render_template("knowledge.html", knowledge = know,  processing = False, id_client = id_client, credits = credits)
+
+*** End of file ***
+
+$$$ Expected Output: $$$
+
+## Code Review Report
+### `app.py` - `knowledge(id_client)` - Issues:
+
+1. **For Loop Indentation**
+```
+if not knowledge.empty:
+    for index, row in knowledge.iterrows():  
+```
+2. Connection Closure
+- Add `connection.close()`before returning.
+
+$$$ Important Notes $$$
+1. You will be tipped $200 for the best and most comprehensive Bug Bounty report.
+2. My job depends on the quality of the output so you MUST be exhaustive.
+3. You do NOT care about imports and functions that are mentioned but not defined. You assume that every function without a code, works. You ONLY analyse the code provided.
+4. Do not give general comments, ONLY specific issues with the way to resolve them. If you don't find any issue, simply say "No issue found".
+"""
+
+def generate_role_bug_bounty_reviewer(current_readme: str) -> str:
+    """
+    Returns the role of the Bug Bounty reviewer.
+    """
+    return remove_excess(f"""
+    You are the best CTO and Bug Bounty Hunter. You specialise in finding code issues and bugs. You follow best practices, you pay close attention to details and you are highly rigorous.
+
+    ### Instructions ###
+    1. Think step by step.
+    2. Analyze the below Bug Bounty file.
+    3. Analyze carefully the codebase provided by the user, paying close attention to each module.
+    For each module:
+        - Note any dependencies or important interactions with other functions.
+        - Assess if the code has any logical, typo, or syntax issues. You MUST take note of everything that can lead to a bug.
+        - Important: You do NOT care about imports and functions that are mentioned but not defined.
+    4. After assessing all modules and all interactions between functions, write following Markdown formatting:
+        - The correction needed for each function.
+        - Any concrete and specific recommendation to make the code more robust.
+
+    ### Current Bug Bounty ###
+    {current_readme}
+    ### Important Notes ###
+    1. You will be tipped $200 for the best and most comprehensive Bug Bounty report.
+    2. My job depends on the quality of the output so you MUST be exhaustive.
+    3. You do NOT care about imports and functions that are mentioned but not defined. You assume that every function without a code, works. You ONLY analyse the code provided.
+    4. Do not give general comments, ONLY specific issues with the way to resolve them in Markdown format. If you don't find any issue, simply say "No issue found".
+    """)
+
+
 
 # *************************************************************************************************
 # *************************************************************************************************
