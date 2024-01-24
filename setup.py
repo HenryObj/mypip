@@ -5,17 +5,15 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="henryobj",
-    version="0.1.71", # need to increment this everytime otherwise Pypi will not accept the new version
+    version="0.1.72", # need to increment this everytime otherwise Pypi will not accept the new version
      url='https://github.com/HenryObj/mypip',
     packages=find_packages(),
     install_requires=[
-        "openai",
-        "tiktoken",
-        "requests",
+        "openai==1.9.0",
+        "tiktoken>=0.5.2",
+        "requests>=2.31.0",
         "bs4"
     ],
     long_description=long_description,
     long_description_content_type="text/markdown",
 )
-
-# "somepackage==1.2.3",  # if a specific version is required. Here we do it in a way where any version (latest stable) should work
