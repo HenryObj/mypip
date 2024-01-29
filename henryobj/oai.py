@@ -385,7 +385,7 @@ def self_affirmation_role(role_chatbot_in_text: str) -> str:
 # ****************************************** REGULAR API CALLS ************************************
 # *************************************************************************************************
 
-def ask_question_gpt(question: str, role: str = "", model: str = MODEL_CHAT, max_tokens: int = MAX_TOKEN_OUTPUT_DEFAULT, verbose: bool = True, json_on: bool = False) -> str:
+def ask_question_gpt(question:str, role:str = "", model:str = MODEL_CHAT, max_tokens:int = MAX_TOKEN_OUTPUT_DEFAULT, verbose:bool = True, temperature=0, top_p=1, json_on: bool = False) -> str:
     """
     Queries an OpenAI GPT model (GPT-3.5 Turbo or GPT-4) with a specific question.
 
@@ -418,13 +418,13 @@ def ask_question_gpt(question: str, role: str = "", model: str = MODEL_CHAT, max
     current_chat = add_content_to_chatTable(question, "user", current_chat)
     if verbose:
         print(f"Completion ~ {max_tokens} tokens. Request ~ {initial_token_usage} tokens.\nContext provided to GPT is:\n{current_chat}")
-    return request_chatgpt(current_chat, max_tokens=max_tokens, model=model, json_on=json_on)
+    return request_chatgpt(current_chat, max_tokens=max_tokens, model=model, temperature=temperature,top_p=top_p, json_on=json_on)
 
-def ask_question_gpt4(question: str, role: str, model=MODEL_GPT4_TURBO, max_tokens=MAX_TOKEN_OUTPUT_DEFAULT_HUGE, verbose = False, json_on=False) -> str:
+def ask_question_gpt4(question: str, role: str, model=MODEL_GPT4_TURBO, max_tokens=MAX_TOKEN_OUTPUT_DEFAULT_HUGE, verbose = False, temperature=0, top_p=1, json_on=False) -> str:
     """
     Queries Chat GPT 4 with a specific question if too lazy to change the param in ask_question_gpt)
     """
-    return ask_question_gpt(question = question, role = role, model = model, max_tokens= max_tokens, verbose=verbose, json_on=json_on)
+    return ask_question_gpt(question = question, role = role, model = model, max_tokens= max_tokens, verbose=verbose, temperature=temperature, top_p=top_p, json_on=json_on)
 
 def embed_text(text: str, max_attempts: int = 3) -> List[float]:
     '''
