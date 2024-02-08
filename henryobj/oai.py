@@ -31,7 +31,8 @@ MAX_TOKEN_WINDOW_GPT4 = 8192
 MODEL_GPT4_TURBO = r"gpt-4-1106-preview" #Max 128,000 token context window total with 4,096 output
 MODEL_GPT4_STABLE = r"gpt-4" # 8K context window and 4,096 output
 
-MODEL_CHAT = r"gpt-3.5-turbo-1106" # Context 16,385 tokens - Reply 4,096
+MODEL_CHAT_BACKUP = r"gpt-3.5-turbo-1106" # Context 16,385 tokens - Reply 4,096
+MODEL_CHAT = r"gpt-3.5-turbo-0125"
 MODEL_CHAT_STABLE = r"gpt-3.5-turbo"
 
 MODEL_EMB = r"text-embedding-ada-002"
@@ -76,7 +77,7 @@ def calculate_token(text: str) -> int:
         encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
         return len(encoding.encode(text))
     except Exception as e:
-        print(f"Error calculating tokens. Input type: {type(text)}. Exception: {e}")
+        log_issue(e, calculate_token, f"Input type: {type(text)}. Text: {text}")
         return -1
 
 def calculate_token_aproximatively(text: str) -> int:
@@ -501,6 +502,9 @@ def request_chatgpt(current_chat: list, max_tokens: int, stop_list=False, max_at
                 time.sleep(0.3)
             else:
                 print(f"Error. This is attempt number {attempts}/{max_attempts}. The exception is {e}. Trying again")
+            if {attempts} == 2:
+                print(f"Trying with the previous model: {MODEL_CHAT_BACKUP}")
+                model = MODEL_CHAT_BACKUP
     if rep == OPEN_AI_ISSUE and check_co():
         print(f" ** We have an issue with Open AI using the model {model}")
         log_issue(f"No answer despite {max_attempts} attempts", request_chatgpt, "Open AI is down")
