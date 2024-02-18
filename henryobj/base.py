@@ -2,7 +2,7 @@
     @Author:				Henry Obegi <HenryObj>
     @Email:					hobegi@gmail.com
     @Creation:				Friday 1st of September 2023
-    @LastModif:             Wednesday 22nd of November 2023
+    @LastModif:             Sunday 18th of February 2024
     @Filename:				base.py
     @Purpose                All the utility functions
     @Partof                 PIP package
@@ -118,9 +118,9 @@ def get_content_of_file(file_path : str) -> str:
         x = file.read()
     return x
 
-def get_current_dir():
+def get_path_of_current_module():
     """
-    Returns the directory of the current module.
+    Returns the path of the current module.
     """
     return os.path.dirname(os.path.abspath(__file__))
 
@@ -133,6 +133,15 @@ def get_module_name(func: Callable[..., Any]) -> str:
         return ''
     else:
         return module.__name__.split('.')[-1]
+
+def get_name_of_variable(value) -> Optional[Any]:
+    """
+    Function which returns the first variable name based on its value.
+    """
+    for var_name, var_value in globals().items():
+        if var_value is value:
+            return var_name
+    return None
 
 def log_issue(exception: Exception, func: Callable[..., Any], additional_info: str = "") -> None:
     '''
@@ -148,7 +157,19 @@ def log_issue(exception: Exception, func: Callable[..., Any], additional_info: s
     '''
     now = datetime.datetime.now().strftime("%d/%m/%y %H:%M:%S")
     module_name = get_module_name(func)
-    print(f" * 🚨 ERROR HO144 * Issue in module {module_name} with {func.__name__} ** Info: {additional_info} ** Exception: {exception} ** When: {now}\n")
+    additional = f"""
+    ****************************************
+    Additional Info: 
+    {additional_info}
+    ****************************************""" if additional_info else ""
+    print(f"""
+    ----------------------------------------------------------------
+    🚨 ERROR HO144 🚨
+    Occurred: {now}
+    Module: {module_name} | Function: {func.__name__}
+    Exception: {exception}{additional}
+    ----------------------------------------------------------------
+    """)
 
 # local tests
 def lprint(*args: Any):
@@ -288,6 +309,31 @@ def split_into_sentences(text: str) -> List[str]:
     Break down a text into sentences based on sentence boundaries.
     '''
     return re.split(r'(?<=[.!?;])\s+|\n', text)
+
+def try_json_loads(s: str) -> Optional[Any]:
+    """
+    Try / Except around the json loads
+    """
+    try:
+        return json.loads(s)
+    except Exception as e:
+        log_issue(e, try_json_loads, f"For the string {s}")
+
+def write_locally(content: str, file_name: str, folder_path:str=None, format:str="txt") -> None:
+    """
+    Writes the given content to a file with the specified name, at the specified folder path, and with the specified format.
+
+    Note: If folder_path is not defined, it will write the content in the dir where the module is run. 
+    """
+    try:
+        if not folder_path: folder_path = get_path_of_current_module()
+        if "." not in file_name: file_name += "." + format
+        saving_path = os.path.join(folder_path, file_name)
+        with open(os.path.join(folder_path, file_name), 'w') as file:
+            file.write(content)
+        return saving_path
+    except Exception as e:
+        log_issue(e, write_locally, f"Input data leading to the error:\n{content}\n####\n{file_name}\n####\n{folder_path}\n####\n{format}\n-----------------------------")
 
 # *************************************************************************************************
 # ************************************* Date & Time related ***************************************

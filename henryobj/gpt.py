@@ -329,8 +329,6 @@ def generate_role_bug_bounty_reviewer(current_readme: str) -> str:
     4. Do not give general comments, ONLY specific issues with the way to resolve them in Markdown format. If you don't find any issue, simply say "No issue found".
     """)
 
-
-
 # *************************************************************************************************
 # *************************************************************************************************
     

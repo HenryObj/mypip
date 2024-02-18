@@ -2,7 +2,7 @@
     @Author:				Henry Obegi <HenryObj>
     @Email:					hobegi@gmail.com
     @Creation:				Friday 1st of September 2023
-    @LastModif:             Friday 5th of January 2024
+    @LastModif:             Sunday 18th of February 2024
     @Filename:				oai.py
     @Purpose                All the functions to deal with OAI library
     @Partof                 PIP package
@@ -35,12 +35,13 @@ MODEL_CHAT_BACKUP = r"gpt-3.5-turbo-1106" # Context 16,385 tokens - Reply 4,096
 MODEL_CHAT = r"gpt-3.5-turbo-0125"
 MODEL_CHAT_STABLE = r"gpt-3.5-turbo"
 
-MODEL_EMB = r"text-embedding-ada-002"
+MODEL_OLD = r"text-embedding-ada-002"
+MODEL_EMB_LARGE = r"text-embedding-3-large"
+MODEL_EMB_SMALL = r"text-embedding-3-small"
 
 # ****** OTHER
 OPEN_AI_ISSUE = r"%$144$%" # When OpenAI is down
 ERROR_MESSAGE = "An error occurred and was logged"
-
 
 # *************************************************************************************************
 # ****************************************** SUPPORT TO LLM ***************************************
@@ -141,7 +142,6 @@ def check_for_ai_warning(text: str) -> bool:
     pattern = r'\b(as an ai|as a large language model|as a chatbot|as a virtual assistant|'\
               r'as a bot|as an artificial intelligence|as an automated|'\
               r'Assistant:|GPT-?\d+|OpenAI)\b'
-    
     # re.IGNORECASE makes the search case-insensitive.
     return bool(re.search(pattern, text, re.IGNORECASE))
 
@@ -167,34 +167,28 @@ def new_chunk_text(text: str, target_token: int = 200) -> List[str]:
     if tok_text < 1.1 * target_token:
         return [text]
     print(f"We need to chunk the text.\nCurrent tokens ~ {tok_text}. Target ~ {target_token}.\nLogically we should get about {custom_round(tok_text/target_token)} chunks")
-    sentences = split_into_sentences(text)
-    
+    sentences = split_into_sentences(text) 
     aprx = False
     # Spacial case if there is no sentences or less sentences than the desired chunk. If so, we chunk by word.
     if len(sentences) < int(tok_text/target_token) + 1:
         sentences = text.split()
         aprx = True
     token_calculator = calculate_token_aproximatively if aprx else calculate_token
-
     final_chunks = []
     current_chunk = ""
     current_token_count = 0
-
     for sentence in sentences:
         sentence_tok = token_calculator(sentence)  # This is a function variable here
         new_token_count =  current_token_count + sentence_tok
-        
         # If adding this "sentence" doesn't exceed the limit, add it to the current chunk.
         if new_token_count <= target_token * 1.05:
             current_chunk += sentence + " "
             current_token_count = new_token_count
-
         # If it does exceed the limit, finalize the current chunk and start a new one keeping the sentence.
         else:
             final_chunks.append(current_chunk.strip())
             current_chunk = sentence + " "
             current_token_count = sentence_tok
-
     if current_chunk.strip():
         final_chunks.append(current_chunk.strip())
     return final_chunks
@@ -230,7 +224,6 @@ def get_gptconv_readable_format(gpt_conversation: str, system_message: bool = Tr
                 return ERROR_MESSAGE
             anchor_2 = gpt_conversation.find(role_user) # len 26 so 28 with the space
             anchor_2_alt = gpt_conversation.find(role_assistant) # len 31 so 33 with the space
-            
             # only the system message
             if anchor_2 == -1: 
                 print("Warning: Your GPT conversation only contains the system prompt")
@@ -280,15 +273,21 @@ def initialize_role_in_chatTable(role_definition: str) -> List[Dict[str, str]]:
     '''
     return [{"role":"system", "content":role_definition}]
 
-def print_gpt_models():
+def print_gpt_models(all:bool=True) -> None:
     '''
     To list the gpt models provided by OpenAI.
+    
+    Args:
+        all: If True, will print all the models. Else, only the 'GPT' ones.
+        verbose: If False, will only print the name. Else, everything.
     '''
-    response = openai.Model.list() # list all models
-
-    for elem in response["data"]:
-        name = elem["id"]
-        if "gpt" in name or "embedding" in name: print(name)
+    response = client.models.list() # fetches all the models
+    for elem in response.data:
+        if not all:  
+            if "gpt" in elem.id:
+                print(elem.id)
+        if all:
+            print(elem.id)
 
 def print_gptconv_nicely(gpt_conversation: str, system_message: bool = True) -> None:
     """
@@ -427,10 +426,12 @@ def ask_question_gpt4(question: str, role: str, model=MODEL_GPT4_TURBO, max_toke
     """
     return ask_question_gpt(question = question, role = role, model = model, max_tokens= max_tokens, verbose=verbose, temperature=temperature, top_p=top_p, json_on=json_on)
 
-def embed_text(text: str, max_attempts: int = 3) -> List[float]:
+def embed_text(text:str, max_attempts:int=3, model=MODEL_EMB_LARGE) -> List[float]:
     '''
     Micro function which returns the embedding of one chunk of text or 0 if issue.
     Used for the multi-threading.
+
+    Model is the new large new embedding one. Use Small if speed is a concern. 
     '''
     res = [0]
     if text == "": return res
@@ -438,7 +439,7 @@ def embed_text(text: str, max_attempts: int = 3) -> List[float]:
     while attempts < max_attempts:
         try:
             res = client.embeddings.create(
-                model=MODEL_EMB,
+                model=model,
                 input=text,
                 encoding_format="float"
                 ).data[0].embedding
