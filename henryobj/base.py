@@ -2,7 +2,7 @@
     @Author:				Henry Obegi <HenryObj>
     @Email:					hobegi@gmail.com
     @Creation:				Friday 1st of September 2023
-    @LastModif:             Sunday 18th of February 2024
+    @LastModif:             Wednesday 28th of February 2024
     @Filename:				base.py
     @Purpose                All the utility functions
     @Partof                 PIP package

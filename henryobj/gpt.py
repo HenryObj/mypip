@@ -3,7 +3,7 @@
     @Author:				Henry Obegi <HenryObj>
     @Email:					hobegi@gmail.com
     @Creation:			    Thursday 18th of January 2024
-    @LastModif:             
+    @LastModif:             Wednesday 28th of February 2024
     @Filename:			    gpt.py
     @Purpose                Giving access to preconfigured GPT4 roles and functions.
     @Partof                 PIP package
