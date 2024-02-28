@@ -118,11 +118,18 @@ def get_content_of_file(file_path : str) -> str:
         x = file.read()
     return x
 
-def get_path_of_current_module():
+def get_path_of_module():
     """
     Returns the path of the current module.
     """
-    return os.path.dirname(os.path.abspath(__file__))
+    return os.path.abspath(__file__)
+
+def get_path_repo_of_module():
+    """
+    Returns the path of the repo that contains the current module.
+
+    """
+    return os.path.dirname(get_path_of_module())
 
 def get_module_name(func: Callable[..., Any]) -> str:
     '''
@@ -326,7 +333,7 @@ def write_locally(content: str, file_name: str, folder_path:str=None, format:str
     Note: If folder_path is not defined, it will write the content in the dir where the module is run. 
     """
     try:
-        if not folder_path: folder_path = get_path_of_current_module()
+        if not folder_path: folder_path = get_path_repo_of_module()
         if "." not in file_name: file_name += "." + format
         saving_path = os.path.join(folder_path, file_name)
         with open(os.path.join(folder_path, file_name), 'w') as file:

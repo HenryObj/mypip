@@ -37,7 +37,8 @@ def joining_and_summarizing_modules(repository_path: str) -> str:
     """
     Process the modules in the repository and subdirectories to create the code context.
     """
-    result, _ = process_directory(repository_path, "", 0)
+    gitignore_spec = read_gitignore(repository_path)
+    result, _ = process_directory(repository_path, "", 0, gitignore_spec)
     return result
 
 def process_directory(directory_path: str, result: str, total_token: int, gitignore_spec) -> tuple:
