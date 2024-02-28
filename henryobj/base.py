@@ -118,18 +118,21 @@ def get_content_of_file(file_path : str) -> str:
         x = file.read()
     return x
 
+def get_path_repo_of_module():
+    """
+    Get the repo path of the caller's module.
+    """
+    return os.path.dirname(get_path_of_module())
+
 def get_path_of_module():
     """
     Returns the path of the current module.
     """
-    return os.path.abspath(__file__)
-
-def get_path_repo_of_module():
-    """
-    Returns the path of the repo that contains the current module.
-
-    """
-    return os.path.dirname(os.path.abspath(__file__))
+    # Get the frame of the caller's caller (two levels up)
+    caller_frame = inspect.stack()[2]
+    # Extract the file path from the frame
+    module_path = caller_frame.filename
+    return os.path.abspath(module_path)
 
 def get_module_name(func: Callable[..., Any]) -> str:
     '''
