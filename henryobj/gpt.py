@@ -13,6 +13,7 @@
 from .oai import *
 import sys
 import threading
+import pathspec
 
 # ****** PATHS & GLOBAL VARIABLES *******
 
@@ -39,19 +40,22 @@ def joining_and_summarizing_modules(repository_path: str) -> str:
     result, _ = process_directory(repository_path, "", 0)
     return result
 
-def process_directory(directory_path: str, result: str, total_token: int) -> tuple:
+def process_directory(directory_path: str, result: str, total_token: int, gitignore_spec) -> tuple:
     """
     Recursively process directories and files within the given path.
     """
     for entry in os.listdir(directory_path):
         full_path = os.path.join(directory_path, entry)
+        # Check against .gitignore rules
+        if gitignore_spec and gitignore_spec.match_file(full_path):
+            continue  # Skip files and directories that match the .gitignore patterns
         if os.path.isdir(full_path):
-            result, total_token = process_directory(full_path, result, total_token)
+            result, total_token = process_directory(full_path, result, total_token, gitignore_spec)
         elif contains_code(full_path):
             print(f"Processing the file {entry}")
             with open(full_path, "r") as doc:
                 content = doc.read()
-            file_token_count = calculate_token(content)
+            file_token_count = calculate_token(content)  # Ensure calculate_token is defined elsewhere
             if total_token + file_token_count < MAX_TOKEN_WINDOW_GPT4_TURBO - BUFFER_README_INPUT:
                 result += f"\n### START OF {entry} ###\n" + content + f"\n### END OF {entry} ###\n\n"
                 total_token += file_token_count
@@ -71,6 +75,17 @@ def progress_indicator(message: str):
             time.sleep(1)
     sys.stdout.write("\r" + " " * (len(message) + 5) + "\r")  # Clear line
     sys.stdout.flush()
+
+def read_gitignore(directory_path: str):
+    """
+    Read the .gitignore file in the given directory and return a PathSpec object.
+    """
+    gitignore_path = os.path.join(directory_path, '.gitignore')
+    if os.path.isfile(gitignore_path):
+        with open(gitignore_path, 'r') as file:
+            spec = pathspec.PathSpec.from_lines('gitwildmatch', file)
+        return spec
+    return None
 
 # *************************************************************************************************
 # ****************************************** GPT FUNCS ********************************************
