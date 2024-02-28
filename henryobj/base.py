@@ -129,7 +129,7 @@ def get_path_repo_of_module():
     Returns the path of the repo that contains the current module.
 
     """
-    return os.path.dirname(get_path_of_module())
+    return os.path.dirname(os.path.abspath(__file__))
 
 def get_module_name(func: Callable[..., Any]) -> str:
     '''
