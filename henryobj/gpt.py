@@ -33,30 +33,33 @@ def contains_code(file_path: str) -> bool:
     _, file_extension = os.path.splitext(file_path)
     return file_extension in code_extensions
 
-def joining_and_summarizing_modules(repository_path: str) -> str:
+def joining_and_summarizing_modules(repository_path: str) -> Optional[str]:
     """
     Process the modules in the repository and subdirectories to create the code context.
     """
     gitignore_spec = read_gitignore(repository_path)
-    result, _ = process_directory(repository_path, "", 0, gitignore_spec)
+    result, _ = process_directory(repository_path, repository_path, "", 0, gitignore_spec)
     return result
 
-def process_directory(directory_path: str, result: str, total_token: int, gitignore_spec) -> tuple:
+def process_directory(root_path: str, current_path: str, result: str, total_token: int, gitignore_spec) -> tuple:
     """
-    Recursively process directories and files within the given path.
+    Recursively process directories and files within the given path, considering .gitignore rules.
     """
-    for entry in os.listdir(directory_path):
-        full_path = os.path.join(directory_path, entry)
-        # Check against .gitignore rules
-        if gitignore_spec and gitignore_spec.match_file(full_path):
+    for entry in os.listdir(current_path):
+        full_path = os.path.join(current_path, entry)
+        relative_path = os.path.relpath(full_path, start=root_path)  # Calculate the relative path
+
+        # Check against .gitignore rules using the relative path
+        if gitignore_spec and gitignore_spec.match_file(relative_path):
             continue  # Skip files and directories that match the .gitignore patterns
+
         if os.path.isdir(full_path):
-            result, total_token = process_directory(full_path, result, total_token, gitignore_spec)
+            result, total_token = process_directory(root_path, full_path, result, total_token, gitignore_spec)
         elif contains_code(full_path):
-            print(f"Processing the file {entry}")
+            print(f"Processing the file {full_path}")
             with open(full_path, "r") as doc:
                 content = doc.read()
-            file_token_count = calculate_token(content)  # Ensure calculate_token is defined elsewhere
+            file_token_count = calculate_token(content)  # Assume calculate_token is defined
             if total_token + file_token_count < MAX_TOKEN_WINDOW_GPT4_TURBO - BUFFER_README_INPUT:
                 result += f"\n### START OF {entry} ###\n" + content + f"\n### END OF {entry} ###\n\n"
                 total_token += file_token_count
@@ -77,11 +80,11 @@ def progress_indicator(message: str):
     sys.stdout.write("\r" + " " * (len(message) + 5) + "\r")  # Clear line
     sys.stdout.flush()
 
-def read_gitignore(directory_path: str):
+def read_gitignore(repository_path: str):
     """
     Read the .gitignore file in the given directory and return a PathSpec object.
     """
-    gitignore_path = os.path.join(directory_path, '.gitignore')
+    gitignore_path = os.path.join(repository_path, '.gitignore')
     if os.path.isfile(gitignore_path):
         with open(gitignore_path, 'r') as file:
             spec = pathspec.PathSpec.from_lines('gitwildmatch', file)
@@ -100,6 +103,8 @@ def gpt_bugbounty_generator(repository_path: str) -> str:
         We query GPT-4 twice to improve the quality. We do not deal with large repo (for now)
     """
     get_code_content = joining_and_summarizing_modules(repository_path)
+    # Guard clause
+    if not get_code_content: return
     query_message = "Querying GPT 4"
     if calculate_token(get_code_content) > LARGE_INPUT_THRESHOLD:
         query_message = "Querying GPT4. The repo is a large input so this might take some time, please wait"
@@ -138,6 +143,8 @@ def gpt_readme_generator(repository_path: str) -> str:
         We query GPT-4 twice to improve the quality. We do not deal with large repo (for now)
     """
     get_code_content = joining_and_summarizing_modules(repository_path)
+    # Guard clause
+    if not get_code_content: return
     query_message = "Querying GPT 4"
     if calculate_token(get_code_content) > LARGE_INPUT_THRESHOLD:
         query_message = "Querying GPT4. The repo is a large input so this might take some time, please wait"
