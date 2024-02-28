@@ -61,7 +61,7 @@ def process_directory(root_path: str, current_path: str, result: str, total_toke
                 content = doc.read()
             file_token_count = calculate_token(content)  # Assume calculate_token is defined
             if total_token + file_token_count < MAX_TOKEN_WINDOW_GPT4_TURBO - BUFFER_README_INPUT:
-                result += f"\n### START OF {entry} ###\n" + content + f"\n### END OF {entry} ###\n\n"
+                result += f"\n### START OF {full_path} ###\n" + content + f"\n### END OF {full_path} ###\n\n"
                 total_token += file_token_count
             else:
                 print("Repo is too large for a single README. Consider breaking down the content.")
@@ -155,7 +155,7 @@ def gpt_readme_generator(repository_path: str) -> str:
 
     first_readme_result = ask_question_gpt4(question=get_code_content, role=ROLE_README_GENERATOR)
     role_reviewer = generate_role_readme_reviewer(first_readme_result)
-    improved_result = ask_question_gpt4(question=first_readme_result, role=role_reviewer)
+    improved_result = ask_question_gpt4(question=get_code_content, role=role_reviewer)
 
     progress_thread.join()  # Wait for the progress indicator to finish
     return improved_result
@@ -182,10 +182,11 @@ def gpt_generate_readme(repository_path: str, verbose = True) -> None:
     
 ROLE_README_GENERATOR = """
 You are the best CTO and README.md writer. You follow best practices, you pay close attention to details and you are highly rigorous.
+The user will share a codebase containing multiple modules. Each module starts with "### START OF path_to_the_module ###" and ends with "### END OF path_to_the_module ###".
 
 ### Instructions ###
 1. Think step by step.
-2. Analyze the provided codebase, paying close attention to each module.
+2. Analyze the provided codebase and understand the architecture.
 2. For each module:
    - Summarize its purpose and functionality.
    - Identify key functions and describe their roles.
@@ -194,49 +195,6 @@ You are the best CTO and README.md writer. You follow best practices, you pay cl
    - An overview of the entire codebase.
    - A description of each module, including its purpose, main functions, and interactions.
    - Any additional notes or observations that could aid in understanding or using the codebase effectively.
-
-### Example of User Input ###
-*** Start of file ***
-// JavaScript code for a simple calculator
-
-function add(a, b) {
-   return a + b;
-}
-
-function subtract(a, b) {
-   return a - b;
-}
-
-// More functions here...
-
-*** End of file - calculator.js ***
-*** Start of file ***
-// CSS for styling the calculator
-
-body {
-   background-color: #f3f3f3;
-}
-
-// More styles here...
-
-*** End of file - styles.css ***
-
-### Expected Output: ###
-
-README File:
-
-- **Overview:**
-  - The provided codebase consists of two main modules: a JavaScript file (`calculator.js`) for calculator functionalities and a CSS file (`styles.css`) for styling the calculator interface.
-
-- **Module Descriptions:**
-  1. `calculator.js`:
-     - **Purpose:** Implements basic calculator functions.
-     - **Key Functions:**
-       - `key_function(a, b)`: Returns the of `a` and `b`.
-
-  2. `styles.css`:
-     - **Purpose:** Provides the styling for the calculator's user interface.
-     - **Interactions:** This CSS file is used to style the HTML elements manipulated by `calculator.js`.
 
 ### Important Notes ###
 1. You will be tipped $200 for the best and most comprehensive README.md file.
@@ -250,20 +208,21 @@ def generate_role_readme_reviewer(current_readme: str) -> str:
     """
     return remove_excess(f"""
     You are the best CTO and README.md writer. You follow best practices, you pay close attention to details and you are highly rigorous.
+    The user will provide the codebase related to the "Current README". The Codebase contains multiple modules. Each module starts with "### START OF path_to_the_module ###" and ends with "### END OF path_to_the_module ###".
 
     ### Instructions ###
     1. Think step by step.
-    2. Analyze the below README file.
+    2. Analyze the "Current README" content.
     3. Analyze carefully the codebase provided by the user, paying close attention to each module.
     3. For each module:
     - Summarize its purpose and functionality.
     - Identify key functions and describe their roles.
     - Note any dependencies or important interactions with other modules.
-    4. Compare these notes with the current README file to ensure that the README file contains:
+    4. Compare these notes with the Current README file to ensure that the Current README file contains:
     - A valid overview of the entire codebase.
     - A description of each module, including its purpose, main functions, and interactions.
     - Any additional notes or observations that could aid in understanding or using the codebase effectively.
-    5. Rewrite the full README content to ensure full exhaustivity, proper formatting, and detailed explanation.
+    5. Return the final README in a way that is exhaustive, with proper formatting, and detailed explanation.
 
     ### Current README ###
     {current_readme}
