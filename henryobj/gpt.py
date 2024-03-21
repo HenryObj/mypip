@@ -13,7 +13,6 @@
 from .oai import *
 import sys
 import threading
-import pathspec
 
 # ****** PATHS & GLOBAL VARIABLES *******
 
@@ -79,17 +78,6 @@ def progress_indicator(message: str):
             time.sleep(1)
     sys.stdout.write("\r" + " " * (len(message) + 5) + "\r")  # Clear line
     sys.stdout.flush()
-
-def read_gitignore(repository_path: str):
-    """
-    Read the .gitignore file in the given directory and return a PathSpec object.
-    """
-    gitignore_path = os.path.join(repository_path, '.gitignore')
-    if os.path.isfile(gitignore_path):
-        with open(gitignore_path, 'r') as file:
-            spec = pathspec.PathSpec.from_lines('gitwildmatch', file)
-        return spec
-    return None
 
 # *************************************************************************************************
 # ****************************************** GPT FUNCS ********************************************

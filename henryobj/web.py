@@ -166,20 +166,24 @@ def crawl_website(url: str, how_many_pages = 30, memory_store = None) -> dict:
 
 def fetch_hyperlinks(url: str) -> List[str]:
     """
-    Fetch and return all hyperlinks from a given URL.
+    Fetch and return all hyperlinks from a given URL, filtering out non-HTML content and irrelevant links.
     """
     try:
         response = requests.get(url, headers=HEADERS)
-        # If the response is not HTML, return an empty list
         if not response.headers.get('Content-Type', '').startswith('text/html'):
             return []
         html = response.text
     except Exception as e:
         log_issue(e, fetch_hyperlinks, f"Couldn't fetch the links of url {url}")
         return []
+
     soup = BeautifulSoup(html, 'html.parser')
-    links = [link.get('href') for link in soup.find_all('a')]
-    return links
+    links = [link.get('href') for link in soup.find_all('a') if link.get('href')]
+
+    filtered_links = [link for link in links if not (
+        link.startswith(('javascript:', 'mailto:', '#')) or '://' not in link and not link.startswith('/')
+    )]
+    return filtered_links
 
 # Fetch URL - works as a standalone
 # Might want to test the driver version with selenium - driver = webdriver.Firefox()

@@ -21,6 +21,7 @@ import time
 from urllib.parse import urlparse, urlunparse, quote, unquote
 import random
 from collections import Counter
+import pathspec
 
 # ****** PATHS & GLOBAL VARIABLES *******
 
@@ -217,6 +218,54 @@ def perf(function: Callable[..., Any]):
         print(f"{function.__name__} done in {duration} seconds")
         return res
     return wrapper
+
+def print_dir_structure(startpath: str, include_dot_contents: bool = False, use_pipes: bool = True, save_to_file: bool = False, output_file: str = 'dir_structure.txt'):
+    """
+    Prints or saves the directory and its content, excluding files and directories specified in .gitignore and __pycache__.
+    Optionally includes the content of directories starting with '.' based on 'include_dot_contents', formats output with pipes
+    and vertical bars if 'use_pipes' is True, and saves output to a file if 'save_to_file' is True.
+
+    Just run "print_dir_structure(".")
+    """
+    output_lines = []
+    gitignore_spec = read_gitignore(startpath)
+
+    for root, dirs, files in os.walk(startpath, topdown=True):
+        # Filter out directories as before
+        dirs[:] = [d for d in dirs if d != '__pycache__' and not (d.startswith('.') and not include_dot_contents) and not (gitignore_spec and gitignore_spec.match_file(os.path.relpath(os.path.join(root, d), startpath)))]
+
+        level = root.replace(startpath, '').count(os.sep)
+        indent = '│   ' * level if use_pipes else ' ' * 4 * level
+        branch = '└───' if use_pipes else ''
+        subindent = '│   ' * (level + 1) if use_pipes else ' ' * 4 * (level + 1)
+        
+        relative_root = os.path.relpath(root, startpath)
+        if not relative_root.startswith('.') or include_dot_contents or relative_root == '.':
+            line = f"{indent}{branch}{os.path.basename(root)}/"
+            output_lines.append(line)
+        
+        for f in files:
+            if (not f.startswith('.') or include_dot_contents) and not (gitignore_spec and gitignore_spec.match_file(os.path.relpath(os.path.join(root, f), startpath))):
+                line = f"{subindent}{f}"
+                output_lines.append(line)
+    # Printing or saving to file
+    if save_to_file:
+        with open(output_file, 'w') as file:
+            file.write('\n'.join(output_lines))
+    else:
+        for line in output_lines:
+            print(line)
+
+def read_gitignore(repository_path: str):
+    """
+    Read the .gitignore file in the given directory and return a PathSpec object.
+    """
+    gitignore_path = os.path.join(repository_path, '.gitignore')
+    if os.path.isfile(gitignore_path):
+        with open(gitignore_path, 'r') as file:
+            spec = pathspec.PathSpec.from_lines('gitwildmatch', file)
+        return spec
+    return None
 
 def remove_break_lines(text: str) -> str:
     '''

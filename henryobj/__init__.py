@@ -1,4 +1,2 @@
-from .base import *
-from .web import *
-from .oai import *
-from .gpt import *
+from .web import * 
+from .gpt import * # it imports all the rest
