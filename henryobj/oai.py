@@ -61,7 +61,7 @@ def add_content_to_chatTable(content: str, role: str, chatTable: List[Dict[str, 
         new_chatTable.append({"role": "assistant", "content": content})
     return new_chatTable
 
-def calculate_token(text: str) -> int:
+def calculate_token(text: str) -> Optional[int]:
     """
     Calculates the number of tokens for a given text using a specific tokenizer.
 
@@ -74,6 +74,13 @@ def calculate_token(text: str) -> int:
     Note:
         Uses the tokenizer API and takes approximately 0.13 seconds per query.
     """
+    if not isinstance(text, str): 
+        log_warning(f"Input is {type(text)} - must be str. Try force conversation", calculate_token, text)
+        try:
+            text = str(text)
+        except Exception as e:
+            log_issue(e, calculate_token, f"Failed to convert to string => {text}")
+            return
     try:
         encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
         return len(encoding.encode(text))
@@ -81,7 +88,7 @@ def calculate_token(text: str) -> int:
         log_issue(e, calculate_token, f"Input type: {type(text)}. Text: {text}")
         return -1
 
-def calculate_token_aproximatively(text: str) -> int:
+def calculate_token_aproximatively(text: str) -> Optional[int]:
     '''
     Returns the token cost for a given text input without calling tiktoken.
 
@@ -89,6 +96,13 @@ def calculate_token_aproximatively(text: str) -> int:
 
     Method: A token is about 4 char when it's text but when the char is special, it consumes more token.
     '''
+    if not isinstance(text, str): 
+        log_warning(f"Input is {type(text)} - must be str. Try force conversation", calculate_token, text)
+        try:
+            text = str(text)
+        except Exception as e:
+            log_issue(e, calculate_token, f"Failed to convert to string => {text}")
+            return
     try:
         nb_words = len(text.split())
         normal, special, asci = 0,0,0

@@ -182,6 +182,34 @@ def log_issue(exception: Exception, func: Callable[..., Any], additional_info: s
     ----------------------------------------------------------------
     """)
 
+def log_warning(warning:str, func: Callable[..., Any], additional_info: str = "") -> None:
+    '''
+    Logs a warning. Less visible in the console than the log issue but works similarly.
+
+    Args:
+        warning: The warning message that was raised.
+        func (Callable[..., Any]): The function in which the exception occurred.
+        additional_info (str): Any additional information to log. Default is an empty string.
+
+    Returns:
+        None
+    '''
+    now = datetime.datetime.now().strftime("%d/%m/%y %H:%M:%S")
+    module_name = get_module_name(func)
+    additional = f"""
+    ****************************************
+    Additional Info: 
+    {additional_info}
+    ****************************************""" if additional_info else ""
+    print(f"""
+    ----------------------------------------------------------------
+    👋 Warning 🟠
+    Occurred: {now}
+    Module: {module_name} | Function: {func.__name__}
+    Warning message: {warning}{additional}
+    ----------------------------------------------------------------
+    """)
+
 # local tests
 def lprint(*args: Any):
     '''
