@@ -441,15 +441,18 @@ def ask_question_gpt4(question: str, role: str, model=MODEL_GPT4_TURBO, max_toke
     """
     return ask_question_gpt(question = question, role = role, model = model, max_tokens= max_tokens, verbose=verbose, temperature=temperature, top_p=top_p, json_on=json_on)
 
-def embed_text(text:str, max_attempts:int=3, model=MODEL_EMB_LARGE) -> List[float]:
+def embed_text(text:str, max_attempts:int=3, model=MODEL_EMB_LARGE) -> Optional[list[float]]:
     '''
     Micro function which returns the embedding of one chunk of text or 0 if issue.
     Used for the multi-threading.
 
-    Model is the new large new embedding one. Use Small if speed is a concern. 
+    Model is the new large new embedding one. Use Small if speed is a concern.
+    Returns None if issue.
     '''
-    res = [0]
     if text == "": return res
+    if not isinstance(text, str):
+        log_warning("You need to input a string", embed_text, f"You inputed {type(text)}")
+        return
     attempts = 0
     while attempts < max_attempts:
         try:
@@ -461,12 +464,11 @@ def embed_text(text:str, max_attempts:int=3, model=MODEL_EMB_LARGE) -> List[floa
             return res
         except Exception as e:
             if not check_co():
-                print(" Warning: You don't have internet. Embedding will not work. Returning 0.")
-                return 0
+                log_warning("Warning: You don't have internet. Embedding will not work")
+                return
             attempts += 1
-            print(f"OAI Embedding faced the exception {e} at attempt # {attempts} out of 3")
-    log_issue(f"No answer despite {max_attempts} attempts", embed_text, "Open AI is down. Returning 0")
-    return res
+            log_warning(f"We faced {e} * Attempt: #{attempts}/ 3", embed_text)
+    log_issue(f"No answer despite {max_attempts} attempts", embed_text, f"This was the text: {text[:100]}")
 
 def request_chatgpt(current_chat: list, max_tokens: int, stop_list=False, max_attempts=3, model=MODEL_CHAT, temperature=0, top_p=1, json_on=False) -> str:
     """
