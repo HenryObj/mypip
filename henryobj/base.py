@@ -165,8 +165,11 @@ def log_endpoint_access(func):
         input_data = None
         for arg in args:
             if hasattr(arg, "dict"):
-                input_data = arg.dict()
-                break
+                try:
+                    input_data = arg.dict()
+                    break
+                except:
+                    pass
         now = datetime.datetime.now().strftime("%d/%m at %H:%M:%S")
         formatted_input_data = json.dumps(input_data, indent=2) if input_data else "No input data or not applicable."
         request_body = None
