@@ -155,31 +155,6 @@ def get_name_of_variable(value) -> Optional[Any]:
             return var_name
     return None
 
-def log_endpoint_access(func):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        request = kwargs.get('request')
-        request_method = request.method if request else "UNKNOWN"
-        request_path = str(request.url) if request else "UNKNOWN"
-        now = datetime.datetime.now().strftime("%d/%m at %H:%M:%S")
-        request_body = None
-        if request:
-            try:
-                request_body = request.json()
-            except:
-                pass
-        if request_body:
-            formatted_request_body = json.dumps(request_body, indent=2)
-            log_message = f"""
-            ----------------------------------------------------------------
-            🟢 Access Endpoint: {request_path} | Method: {request_method} | Timestamp: {now}
-            Request Body: {formatted_request_body}
-            ----------------------------------------------------------------
-            """
-            print(log_message)
-        return func(*args, **kwargs)
-    return wrapper
-
 def log_issue(exception: Exception, func: Callable[..., Any], additional_info: str = "") -> None:
     '''
     Logs an issue. Can be called anywhere and will display an error message showing the module, the function, the exception and if specified, the additional info.
