@@ -22,6 +22,7 @@ from urllib.parse import urlparse, urlunparse, quote, unquote
 import random
 from collections import Counter
 import pathspec
+from functools import wraps
 
 # ****** PATHS & GLOBAL VARIABLES *******
 
@@ -153,6 +154,46 @@ def get_name_of_variable(value) -> Optional[Any]:
         if var_value is value:
             return var_name
     return None
+
+def log_endpoint_access(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        request = kwargs.get('request')
+        request_method = request.method if request else "UNKNOWN"
+        request_path = str(request.url) if request else "UNKNOWN"
+
+        input_data = None
+        for arg in args:
+            if hasattr(arg, "dict"):
+                input_data = arg.dict()
+                break
+        now = datetime.now().strftime("%d/%m at %H:%M:%S")
+        formatted_input_data = json.dumps(input_data, indent=2) if input_data else "No input data or not applicable."
+        request_body = None
+        if request:
+            try:
+                request_body = request.json()
+            except:
+                pass
+        if request_body:
+            formatted_request_body = json.dumps(request_body, indent=2)
+            log_message = f"""
+            ----------------------------------------------------------------
+            🟢 Access Endpoint: {request_path} | Method: {request_method} | Timestamp: {now}
+            Input Data: {formatted_input_data}
+            Request Body: {formatted_request_body}
+            ----------------------------------------------------------------
+            """
+        else:
+            log_message = f"""
+            ----------------------------------------------------------------
+            🟢 Access Endpoint: {request_path} | Method: {request_method} | Timestamp: {now}
+            Input Data: {formatted_input_data}
+            ----------------------------------------------------------------
+            """
+        print(log_message)
+        return func(*args, **kwargs)
+    return wrapper
 
 def log_issue(exception: Exception, func: Callable[..., Any], additional_info: str = "") -> None:
     '''
