@@ -161,17 +161,7 @@ def log_endpoint_access(func):
         request = kwargs.get('request')
         request_method = request.method if request else "UNKNOWN"
         request_path = str(request.url) if request else "UNKNOWN"
-
-        input_data = None
-        for arg in args:
-            if hasattr(arg, "dict"):
-                try:
-                    input_data = arg.dict()
-                    break
-                except:
-                    pass
         now = datetime.datetime.now().strftime("%d/%m at %H:%M:%S")
-        formatted_input_data = json.dumps(input_data, indent=2) if input_data else "No input data or not applicable."
         request_body = None
         if request:
             try:
@@ -183,18 +173,10 @@ def log_endpoint_access(func):
             log_message = f"""
             ----------------------------------------------------------------
             🟢 Access Endpoint: {request_path} | Method: {request_method} | Timestamp: {now}
-            Input Data: {formatted_input_data}
             Request Body: {formatted_request_body}
             ----------------------------------------------------------------
             """
-        else:
-            log_message = f"""
-            ----------------------------------------------------------------
-            🟢 Access Endpoint: {request_path} | Method: {request_method} | Timestamp: {now}
-            Input Data: {formatted_input_data}
-            ----------------------------------------------------------------
-            """
-        print(log_message)
+            print(log_message)
         return func(*args, **kwargs)
     return wrapper
 
