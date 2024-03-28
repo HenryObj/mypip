@@ -47,7 +47,7 @@ ERROR_MESSAGE = "An error occurred and was logged"
 # ****************************************** SUPPORT TO LLM ***************************************
 # *************************************************************************************************
 
-def add_content_to_chatTable(content: str, role: str, chatTable: List[Dict[str, str]]) -> List[Dict[str, str]]:
+def add_content_to_chatTable(content: str, role: str, chatTable: list[dict[str, str]]) -> list[dict[str, str]]:
     """
     Feeds a chatTable with the new query. Returns the new chatTable.
     Role is either 'assistant' when the AI is answering or 'user' when the user has a question.
@@ -121,7 +121,7 @@ def calculate_token_aproximatively(text: str) -> Optional[int]:
         log_issue(e,calculate_token_aproximatively,f"The text was {type(text)} and {len(text)}")
         return calculate_token(text)
 
-def change_role_chatTable(previous_chat: List[Dict[str, str]], new_role: str) -> List[Dict[str, str]]:
+def change_role_chatTable(previous_chat: list[dict[str, str]], new_role: str) -> list[dict[str, str]]:
     '''
     Function to change the role defined at the beginning of a chat with a new role.
     Returns the new chatTable with the system role updated.
@@ -159,9 +159,9 @@ def check_for_ai_warning(text: str) -> bool:
     # re.IGNORECASE makes the search case-insensitive.
     return bool(re.search(pattern, text, re.IGNORECASE))
 
-def check_if_gptconv_format(conversation: List[Dict[str, str]]) -> bool:
+def check_if_gptconv_format(conversation: list[dict[str, str]]) -> bool:
     '''
-    Checks if the structure of the List matches the GPT conversation format.
+    Checks if the structure of the list matches the GPT conversation format.
     
     Returns:
     - bool: True if valid, False otherwise.
@@ -173,7 +173,7 @@ def check_if_gptconv_format(conversation: List[Dict[str, str]]) -> bool:
             return False
     return True
 
-def new_chunk_text(text: str, target_token: int = 200) -> List[str]:
+def new_chunk_text(text: str, target_token: int = 200) -> list[str]:
     '''
     Much simpler function to chunk the text in blocks by spliting by sentence. The last chunk might be small.
     '''
@@ -281,7 +281,7 @@ def get_gptconv_readable_format(gpt_conversation: str, system_message: bool = Tr
         log_issue(e, get_gptconv_readable_format, f"This was the input {gpt_conversation}")
         return ERROR_MESSAGE
 
-def initialize_role_in_chatTable(role_definition: str) -> List[Dict[str, str]]:
+def initialize_role_in_chatTable(role_definition: str) -> list[dict[str, str]]:
     '''
     We need to define how we want our model to perform.
     This function takes this definition as a input and returns it into the chat_table_format.

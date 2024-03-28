@@ -15,14 +15,14 @@ import datetime
 import inspect
 import tiktoken
 import json
-from typing import Callable, Any, Union, List, Dict, Optional, Tuple
+from typing import Callable, Any, Union, Optional
 import re
 import time
 from urllib.parse import urlparse, urlunparse, quote, unquote
 import random
 from collections import Counter
 import pathspec
-from functools import wraps
+import ast
 
 # ****** PATHS & GLOBAL VARIABLES *******
 
@@ -86,6 +86,24 @@ def custom_round(num: float, threshold: float = 0.1) -> int:
     """
     decimal_part = num % 1  # Get the decimal part more efficiently
     return int(num) + (decimal_part >= threshold)
+
+def extract_dict_from_str(s: str) -> Optional[dict]:
+    """
+    Attempts to parse a string into a dictionary using ast.literal_eval first,
+    then json.loads if the first attempt fails. Logs and returns None if both attempts fail.
+    """
+    try:
+        x = ast.literal_eval(s)
+        if isinstance(x, dict):
+            return x
+    except:
+        pass
+    try:
+        x = json.loads(s)
+        if isinstance(x, dict):
+            return x
+    except Exception as e:
+        print(f"Issue with both ast.eval and json.loads. Input Data: {type(s)} * {s}")
 
 def find_sentence_boundary(chunk : str, desired_end : int) -> int:
     '''
@@ -168,7 +186,16 @@ def log_issue(exception: Exception, func: Callable[..., Any], additional_info: s
         None
     '''
     now = datetime.datetime.now().strftime("%d/%m/%y %H:%M:%S")
-    module_name = get_module_name(func)
+    if hasattr(func, '__name__'):
+        function_name = func.__name__
+        module_name = get_module_name(func)
+    else:
+        function_name = func if isinstance(func, str) else "UNKNOWN"
+        print(f"🟡 What is this function? {func} * {type(func)}")
+        try:
+            module_name = get_module_name(func)
+        except:
+            module_name = "Couldn't get the module name"
     additional = f"""
     ****************************************
     Additional Info: 
@@ -178,7 +205,7 @@ def log_issue(exception: Exception, func: Callable[..., Any], additional_info: s
     ----------------------------------------------------------------
     🚨 ERROR HO144 🚨
     Occurred: {now}
-    Module: {module_name} | Function: {func.__name__}
+    Module: {module_name} | Function: {function_name}
     Exception: {exception}{additional}
     ----------------------------------------------------------------
     """)
@@ -392,7 +419,7 @@ def sanitize_text(text : str) -> str:
     text = " ".join(text.split()) # Replace multiple consecutive spaces with a single space
     return text
 
-def split_into_sentences(text: str) -> List[str]:
+def split_into_sentences(text: str) -> list[str]:
     '''
     Break down a text into sentences based on sentence boundaries.
     '''

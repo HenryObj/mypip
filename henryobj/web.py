@@ -164,7 +164,7 @@ def crawl_website(url: str, how_many_pages = 30, memory_store = None) -> dict:
                     seen.add(link)
     return memory_store
 
-def fetch_hyperlinks(url: str) -> List[str]:
+def fetch_hyperlinks(url: str) -> list[str]:
     """
     Fetch and return all hyperlinks from a given URL, filtering out non-HTML content and irrelevant links.
     """
