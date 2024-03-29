@@ -26,6 +26,7 @@ import ast
 
 # ****** PATHS & GLOBAL VARIABLES *******
 
+WARNING_UNKNOWN = "\033[31mUNKNOWN\033[0m"
 
 # *************************************************************************************************
 # *************************************** General Utilities ***************************************
@@ -190,7 +191,7 @@ def log_issue(exception: Exception, func: Callable[..., Any], additional_info: s
         function_name = func.__name__
         module_name = get_module_name(func)
     else:
-        function_name = func if isinstance(func, str) else "UNKNOWN"
+        function_name = func if isinstance(func, str) else WARNING_UNKNOWN
         print(f"🟡 What is this function? {func} * {type(func)}")
         try:
             module_name = get_module_name(func)
@@ -223,7 +224,16 @@ def log_warning(warning:str, func: Callable[..., Any], additional_info: str = ""
         None
     '''
     now = datetime.datetime.now().strftime("%d/%m/%y %H:%M:%S")
-    module_name = get_module_name(func)
+    if hasattr(func, '__name__'):
+        function_name = func.__name__
+        module_name = get_module_name(func)
+    else:
+        function_name = func if isinstance(func, str) else WARNING_UNKNOWN
+        print(f"🟡 What is this function? {func} * {type(func)}")
+        try:
+            module_name = get_module_name(func)
+        except:
+            module_name = "Couldn't get the module name"
     additional = f"""
     ****************************************
     Additional Info: 
@@ -233,7 +243,7 @@ def log_warning(warning:str, func: Callable[..., Any], additional_info: str = ""
     ----------------------------------------------------------------
     👋 Warning 🟠
     Occurred: {now}
-    Module: {module_name} | Function: {func.__name__}
+    Module: {module_name} | Function: {function_name}
     Warning message: {warning}{additional}
     ----------------------------------------------------------------
     """)
@@ -264,7 +274,6 @@ def print_style(message, color="blue", bold=False):
         "end": "\033[0m",  # Resets the color/style
     }
     print(f"{bold_code}{colors.get(color, colors['green'])}{message}{colors['end']}")
-
 
 # local tests
 def lprint(*args: Any):

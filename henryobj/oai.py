@@ -205,7 +205,7 @@ def new_chunk_text(text: str, target_token: int = 200) -> list[str]:
             current_token_count = sentence_tok
     if current_chunk.strip():
         final_chunks.append(current_chunk.strip())
-    print(f"We got and returned {final_chunks} chunks")
+    print(f"We got and returned {len(final_chunks)} chunks")
     return final_chunks
 
 def get_gptconv_readable_format(gpt_conversation: str, system_message: bool = True) -> str:
