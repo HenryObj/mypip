@@ -238,11 +238,12 @@ def log_warning(warning:str, func: Callable[..., Any], additional_info: str = ""
     ----------------------------------------------------------------
     """)
 
-def print_color(message, color="blue"):
+def print_style(message, color="blue", bold=False):
     """
     To print a message in a specific color.
     Check the function for the list of available colors.
     """
+    bold_code = "\033[1m" if bold else ""
     colors = {
         "black": "\033[30m",
         "red": "\033[31m",
@@ -262,7 +263,8 @@ def print_color(message, color="blue"):
         "white": "\033[97m",
         "end": "\033[0m",  # Resets the color/style
     }
-    print(f"{colors.get(color, colors['white'])}{message}{colors['end']}")
+    print(f"{bold_code}{colors.get(color, colors['green'])}{message}{colors['end']}")
+
 
 # local tests
 def lprint(*args: Any):
