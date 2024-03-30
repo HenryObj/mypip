@@ -9,20 +9,20 @@
 """
 
 # ************** IMPORTS ****************
-import os
-import requests
-import datetime
-import inspect
-import tiktoken
-import json
+
+from .config import *
+
 from typing import Callable, Any, Union, Optional
-import re
-import time
-from urllib.parse import urlparse, urlunparse, quote, unquote
-import random
 from collections import Counter
 import pathspec
+import datetime
+import inspect
+import random
+import json
+import time
 import ast
+import os
+import re
 
 # ****** PATHS & GLOBAL VARIABLES *******
 
@@ -39,15 +39,15 @@ def check__if_password_safe(password: str) -> bool:
     return bool(re.match(r'^[a-zA-Z0-9$*&@#%!=+,.:;<>?[\]^_`{|}~"-]+$', password))
 
 def clean_punctuation(text: str) -> str:
-    '''
+    """
     Function to clean a text by removing space before a punctuation sign.
-    '''
+    """
     return re.sub(r'\s([?.!,";:])', r'\1', text)
 
 def clean_text(text: str) -> str:
-    '''
+    """
     Function to clean a text by removing non printable char and removing the excess (double \n and double spaces)
-    '''
+    """
     text = remove_non_printable_light(text)
     text = remove_excess(text)
     return text
@@ -61,11 +61,11 @@ def convert_dict_to_text(dictionnary: dict, break_two_lines= False) -> str:
     return x.join([f"{y}\n{value}" for y, value in dictionnary.items()])
 
 def correct_spaces_in_text(text):
-    '''
+    """
     Ensures punctuation marks like ".", "?", "!", ";", and "," are correctly spaced with only one space with the next non-space char. 
 
     Example: 'Hello,world!How     are you?' would be converted to 'Hello, world! How are you?'
-    '''
+    """
     return re.sub(r"([\.,\?!;])\s*(\S)", r"\1 \2", text)
 
 def count_occurrence_in_text(full_text: str, target_word: str, case_sensitive: bool = False) -> int:
@@ -107,17 +107,17 @@ def extract_dict_from_str(s: str) -> Optional[dict]:
         print(f"Issue with both ast.eval and json.loads. Input Data: {type(s)} * {s}")
 
 def find_sentence_boundary(chunk : str, desired_end : int) -> int:
-    '''
+    """
     Simple function to find the last possible sentence boundary. Returns the position of this character or the length of the text if nothing is found.
-    '''
+    """
     for punct in ('. ', '.', '!', ';'):
         pos = chunk[:desired_end].rfind(punct)
     return len(chunk) if pos == -1 else pos
 
 def is_json(myjson: str) -> bool:
-  '''
+  """
   Returns True if the input is in json format. False otherwise.
-  '''
+  """
   try:
     json.loads(myjson)
   except ValueError as e:
@@ -125,16 +125,16 @@ def is_json(myjson: str) -> bool:
   return True
 
 def generate_unique_integer():
-    '''
+    """
     Returns a random integer. Should be unique because between 0 and 2*32 -1 but still we can check after.
-    '''
+    """
     rand_num = random.randint(0, (1 << 31) - 1)
     return rand_num
 
 def get_content_of_file(file_path : str) -> str:
-    '''
+    """
     Reads and returns the content of a file.
-    '''
+    """
     with open(file_path,"r") as file:
         x = file.read()
     return x
@@ -156,9 +156,9 @@ def get_path_of_module():
     return os.path.abspath(module_path)
 
 def get_module_name(func: Callable[..., Any]) -> str:
-    '''
+    """
     Given a function, returns the name of the module in which it is defined.
-    '''
+    """
     module = inspect.getmodule(func)
     if module is None:
         return ''
@@ -175,7 +175,7 @@ def get_name_of_variable(value) -> Optional[Any]:
     return None
 
 def log_issue(exception: Exception, func: Callable[..., Any], additional_info: str = "") -> None:
-    '''
+    """
     Logs an issue. Can be called anywhere and will display an error message showing the module, the function, the exception and if specified, the additional info.
 
     Args:
@@ -185,7 +185,7 @@ def log_issue(exception: Exception, func: Callable[..., Any], additional_info: s
 
     Returns:
         None
-    '''
+    """
     now = datetime.datetime.now().strftime("%d/%m/%y %H:%M:%S")
     if hasattr(func, '__name__'):
         function_name = func.__name__
@@ -212,7 +212,7 @@ def log_issue(exception: Exception, func: Callable[..., Any], additional_info: s
     """)
 
 def log_warning(warning:str, func: Callable[..., Any], additional_info: str = "") -> None:
-    '''
+    """
     Logs a warning. Less visible in the console than the log issue but works similarly.
 
     Args:
@@ -222,7 +222,7 @@ def log_warning(warning:str, func: Callable[..., Any], additional_info: str = ""
 
     Returns:
         None
-    '''
+    """
     now = datetime.datetime.now().strftime("%d/%m/%y %H:%M:%S")
     if hasattr(func, '__name__'):
         function_name = func.__name__
@@ -277,11 +277,11 @@ def print_style(message, color="blue", bold=False):
 
 # local tests
 def lprint(*args: Any):
-    '''
+    """
     Custom print function to display that things are well at this particular line number.
 
     If arguments are passed, they are printed in the format: "At line {line_number} we have: {args}"
-    '''
+    """
     caller_frame = inspect.stack()[1][0]
     line_number = caller_frame.f_lineno
     if not bool(len(args)):
@@ -291,18 +291,18 @@ def lprint(*args: Any):
 
 # local tests
 def fprint(func: Callable[..., Any], additional_info: str = ""):
-    '''
+    """
     Custom print function to display what is going on a given line of a given module. Used for verbose.
-    '''
+    """
     caller_frame = inspect.stack()[1][0]
     line_number = caller_frame.f_lineno
     module_name = get_module_name(func)
     print(f"** LOG ** {line_number} of {module_name} ** INFO: {additional_info}")
     
 def perf(function: Callable[..., Any]):
-    '''
+    """
     To be used as a decorator to a function to display the time to run the said function.
-    '''
+    """
     start = time.perf_counter()
     def wrapper(*args, **kwargs):
         res = function(*args,**kwargs)
@@ -361,9 +361,9 @@ def read_gitignore(repository_path: str):
     return None
 
 def remove_break_lines(text: str) -> str:
-    '''
+    """
     Replaces all occurrences of double spaces and newline characters ('\n') with a single space.
-    '''
+    """
     jump = '\n'
     double_space = '  '
     while jump in text:
@@ -373,9 +373,9 @@ def remove_break_lines(text: str) -> str:
     return text
 
 def remove_jump_double_punc(text: str) -> str:
-    '''
+    """
     Removes all '\n' and '..' for the function to analyze sentiments.
-    '''
+    """
     jump = '\n'
     text = text.replace(jump,'')
     double = '..'
@@ -384,9 +384,9 @@ def remove_jump_double_punc(text: str) -> str:
     return text
 
 def remove_excess(text: str) -> str:
-    '''
+    """
     Replaces all occurrences of double newlines ('\n\n') and double spaces with single newline and space, respectively.
-    '''
+    """
     double_jump = '\n\n'
     double_space = '  '
     while double_jump in text:
@@ -396,24 +396,24 @@ def remove_excess(text: str) -> str:
     return text
 
 def remove_non_printable(text :str) -> str:
-    '''
+    """
     Strong cleaner which removes non-ASCII characters from the input text.
-    '''
+    """
     text = re.sub(r'[\x00-\x1f\x7f-\x9f]', '', text) # removes non printable char
     y = text.split()
     z = [el for el in y if all(ord(e) < 128 for e in el)]
     return ' '.join(z)
 
 def remove_non_printable_light(text: str) -> str:
-    '''
+    """
     Light cleaner to remove non-printable characters from the input text. Used in the clean_text()
-    '''
+    """
     return ''.join(char for char in text if char.isprintable() or char.isspace())
 
 def remove_punctuation(text: str) -> str:
-    '''
+    """
     Light cleaner using regex to remove punctuation from a text.
-    '''
+    """
     return re.sub(r'[^\w\s]', '', text) 
 
 def safe_json_load(s: str):
@@ -446,9 +446,9 @@ def sanitize_json_response(response: str) -> Union[str, bool]:
     return response[bal1:bal2+1]
 
 def sanitize_text(text : str) -> str:
-    '''
+    """
     Function to clean the text before processing it in the DB - to avoid some errors due to bad inputs.
-    '''
+    """
     text = text.replace("\x00", "") # Remove NUL characters
     text = text.encode("utf-8", "ignore").decode("utf-8", "ignore")  # Normalize Unicode characters
     text = text.replace("\u00A0", " ") # Replace non-breaking spaces with regular spaces
@@ -457,9 +457,9 @@ def sanitize_text(text : str) -> str:
     return text
 
 def split_into_sentences(text: str) -> list[str]:
-    '''
+    """
     Break down a text into sentences based on sentence boundaries.
-    '''
+    """
     return re.split(r'(?<=[.!?;])\s+|\n', text)
 
 def try_json_loads(s: str) -> Optional[Any]:
@@ -516,17 +516,17 @@ def ensure_valid_date(date_input: Union[datetime.date, str]) -> Union[datetime.d
        return None
 
 def format_datetime(datetime):
-    '''
+    """
     Takes a Datetime as an input and returns a string in the format "10-Jan-2022"
-    '''
+    """
     return datetime.strftime('%d-%b-%Y')
 
 def format_timestamp(timestamp: str) -> str:
-    '''
+    """
     Converts a timestamp string to a "10-Jan-2022" format.
     
     Returns original timestamp if parsing fails.
-    '''
+    """
     try:
         dt = datetime.datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S')
         return format_datetime(dt)
@@ -561,79 +561,12 @@ def get_days_from_date(date_input: Union[datetime.date, str], unit: str = 'days'
         return None
 
 def get_now(exact: bool = False) -> str:
-    '''
+    """
     Small function to get the timestamp in string format.
     By default we return the following format: "10_Jan_2023" but if exact is True, we will return 10_Jan_2023_@15h23s33
-    '''
+    """
     now = datetime.datetime.now()
     return datetime.datetime.strftime(now, "%d_%b_%Y@%Hh%Ms%S") if exact else datetime.datetime.strftime(now, "%d_%b_%Y")
-
-
-# *************************************************************************************************
-# *************************************** Internet Related ****************************************
-# *************************************************************************************************
-
-def check_co() -> bool:
-    '''
-    Returns true if we have an internet connection. False otherwise.
-    '''
-    try:
-        requests.head("http://google.com")
-        return True
-    except Exception:
-        return False
-
-def check_valid_url(url):
-    '''
-    Function which takes a string and return True if the url is valid.
-    '''
-    try:
-        result = urlparse(url)
-        if len(result.netloc) <= 1: return False # Checks if the user has put a local file
-        return all([result.scheme, result.netloc])
-    except ValueError:
-        return False
-
-def clean_url(url):
-    '''
-    User-submitted urls might not be perfectly fit to be processed by check_valid_url
-    '''
-    url = url.strip()
-    if not url.startswith('http'):
-        url = 'https://' + url
-    parsed_url = urlparse(url)
-
-    # Clean the domain by removing any unwanted characters
-    cleaned_netloc = re.sub(r'[^a-zA-Z0-9\.\-]', '', parsed_url.netloc)
-
-    # Ensure proper percent-encoding of the path component
-    unquoted_path = unquote(parsed_url.path)
-    quoted_path = quote(unquoted_path)
-
-    cleaned_url = urlunparse(parsed_url._replace(netloc=cleaned_netloc, path=quoted_path))
-    return cleaned_url
-
-def get_local_domain(from_url):
-    '''
-    Get the local domain from a given URL.
-    Will return the same domain for https://chat.openai.com/chat" and https://openai.com/chat".
-    '''
-    try:
-        netloc = urlparse(from_url).netloc
-        parts = netloc.split(".")
-        if len(parts) > 2:
-            domain = parts[-2]
-        else:
-            domain = parts[0]
-        print("URL: ", from_url, " Domain: ", str(domain))
-        return str(domain)
-    except Exception as e:
-        log_issue(e, get_local_domain, f"For {from_url}")
-
-def get_primary_lang_code(lang_data: str) -> str:
-    # Split the lang_data by comma and extract the main language code of the first segment
-    primary_lang_code = lang_data.split(",")[0].split("-")[0]
-    return primary_lang_code
 
 # *************************************************************
 

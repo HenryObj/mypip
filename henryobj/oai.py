@@ -1,51 +1,33 @@
-"""
-    @Author:				Henry Obegi <HenryObj>
-    @Email:					hobegi@gmail.com
-    @Creation:				Friday 1st of September 2023
-    @LastModif:             Wednesday 28th of February 2024
-    @Filename:				oai.py
-    @Purpose                All the functions to deal with OAI library
-    @Partof                 PIP package
-"""
+# All that is related ot Open AI
 
-from .base import *
+from .config import (
+    ERROR_MESSAGE, OPEN_AI_ISSUE, MAX_TOKEN_OUTPUT_DEFAULT, MAX_TOKEN_OUTPUT_DEFAULT_HUGE, MAX_TOKEN_WINDOW_GPT4, 
+    MAX_TOKEN_WINDOW_GPT4_TURBO, MAX_TOKEN_WINDOW_OLD, MAX_TOKEN_WINDOW_GPT35_TURBO, MODEL_GPT4_TURBO,
+    MODEL_GPT4_STABLE, MODEL_CHAT, MODEL_EMB_LARGE, MODEL_CHAT_STABLE, MODEL_CHAT_BACKUP
+)
+from .base import log_warning, log_issue, split_into_sentences, custom_round
+from .web import check_co
 
+from typing import Optional
+
+import tiktoken
 import openai
+import time
+import os
+import re
+
+
+# ****************************************** INIT CLIENT *****************************************
+
+
 
 OAI_KEY = os.getenv("OAI_API_KEY")
 client = openai.OpenAI(
     api_key=OAI_KEY,
 )
 
-# ****** TOKEN LIMITATIONS
-MAX_TOKEN_OUTPUT = 4096
-MAX_TOKEN_OUTPUT_DEFAULT = 300
-MAX_TOKEN_OUTPUT_DEFAULT_HUGE = 3000
 
-MAX_TOKEN_WINDOW_OLD = 4096 
-MAX_TOKEN_WINDOW_GPT4_TURBO = 128000
-MAX_TOKEN_WINDOW_GPT35_TURBO = 16385
-MAX_TOKEN_WINDOW_GPT4 = 8192
-
-# ****** MODELS
-MODEL_GPT4_TURBO = r"gpt-4-1106-preview" #Max 128,000 token context window total with 4,096 output
-MODEL_GPT4_STABLE = r"gpt-4" # 8K context window and 4,096 output
-
-MODEL_CHAT_BACKUP = r"gpt-3.5-turbo-1106" # Context 16,385 tokens - Reply 4,096
-MODEL_CHAT = r"gpt-3.5-turbo-0125"
-MODEL_CHAT_STABLE = r"gpt-3.5-turbo"
-
-MODEL_OLD = r"text-embedding-ada-002"
-MODEL_EMB_LARGE = r"text-embedding-3-large"
-MODEL_EMB_SMALL = r"text-embedding-3-small"
-
-# ****** OTHER
-OPEN_AI_ISSUE = r"%$144$%" # When OpenAI is down
-ERROR_MESSAGE = "An error occurred and was logged"
-
-# *************************************************************************************************
 # ****************************************** SUPPORT TO LLM ***************************************
-# *************************************************************************************************
 
 def add_content_to_chatTable(content: str, role: str, chatTable: list[dict[str, str]]) -> list[dict[str, str]]:
     """
@@ -89,13 +71,13 @@ def calculate_token(text: str) -> Optional[int]:
         return -1
 
 def calculate_token_aproximatively(text: str) -> Optional[int]:
-    '''
+    """
     Returns the token cost for a given text input without calling tiktoken.
 
     2 * Faster than tiktoken but less precise. Will go on the safe side (so real tokens is less)
 
     Method: A token is about 4 char when it's text but when the char is special, it consumes more token.
-    '''
+    """
     if not isinstance(text, str): 
         log_warning(f"Input is {type(text)} - must be str. Try force conversation", calculate_token, text)
         try:
@@ -122,10 +104,10 @@ def calculate_token_aproximatively(text: str) -> Optional[int]:
         return calculate_token(text)
 
 def change_role_chatTable(previous_chat: list[dict[str, str]], new_role: str) -> list[dict[str, str]]:
-    '''
+    """
     Function to change the role defined at the beginning of a chat with a new role.
     Returns the new chatTable with the system role updated.
-    '''
+    """
     if previous_chat is None:
         log_issue("Previous_chat is none", change_role_chatTable)
         return [{'role': 'system', 'content': new_role}]
@@ -160,12 +142,12 @@ def check_for_ai_warning(text: str) -> bool:
     return bool(re.search(pattern, text, re.IGNORECASE))
 
 def check_if_gptconv_format(conversation: list[dict[str, str]]) -> bool:
-    '''
+    """
     Checks if the structure of the list matches the GPT conversation format.
     
     Returns:
     - bool: True if valid, False otherwise.
-    '''
+    """
     for entry in conversation:
         if not set(entry.keys()) == {'role', 'content'}:
             return False
@@ -174,9 +156,9 @@ def check_if_gptconv_format(conversation: list[dict[str, str]]) -> bool:
     return True
 
 def new_chunk_text(text: str, target_token: int = 200) -> list[str]:
-    '''
+    """
     Much simpler function to chunk the text in blocks by spliting by sentence. The last chunk might be small.
-    '''
+    """
     tok_text = calculate_token(text)
     if tok_text < 1.1 * target_token:
         return [text]
@@ -282,20 +264,20 @@ def get_gptconv_readable_format(gpt_conversation: str, system_message: bool = Tr
         return ERROR_MESSAGE
 
 def initialize_role_in_chatTable(role_definition: str) -> list[dict[str, str]]:
-    '''
+    """
     We need to define how we want our model to perform.
     This function takes this definition as a input and returns it into the chat_table_format.
-    '''
+    """
     return [{"role":"system", "content":role_definition}]
 
 def print_gpt_models(all:bool=True) -> None:
-    '''
+    """
     To list the gpt models provided by OpenAI.
     
     Args:
         all: If True, will print all the models. Else, only the 'GPT' ones.
         verbose: If False, will only print the name. Else, everything.
-    '''
+    """
     response = client.models.list() # fetches all the models
     for elem in response.data:
         if not all:  
@@ -313,10 +295,10 @@ def print_gptconv_nicely(gpt_conversation: str, system_message: bool = True) -> 
 
 # For local tests
 def print_len_token_price(file_path_or_text, Embed = False):
-    '''
+    """
     Basic function to print out the length, the number of token, of a given file or text.
     Chat gpt-3.5-turbo is at $0.002 per 1K token while Embedding is at $0.0004 per 1K tokens. If not specified, we assume it's Chat gpt-3.5-turbo.
-    '''
+    """
     price = 0.002 if not Embed else 0.0004
     if os.path.isfile(file_path_or_text):
         name = os.path.basename(file_path_or_text)
@@ -385,11 +367,11 @@ def sanitize_bad_gpt_output(gpt_output: str, case = None) -> str:
     return gpt_output.strip()
 
 def self_affirmation_role(role_chatbot_in_text: str) -> str:
-    '''
+    """
     Function to transform an instruction of the system prompt into a self-affirmation message.
 
     Theory is that seeing the message twice will make the LLM believe it more.
-    '''
+    """
     clean_text = role_chatbot_in_text.strip()
     clean_text = clean_text.replace(" you are ", " I am ").replace(" You are ", " I am ").replace(" You Are ", " I Am ")
     clean_text = clean_text.replace("You ", "I ").replace(" you ", " I ").replace(" You ", " I ")
@@ -442,33 +424,36 @@ def ask_question_gpt4(question: str, role: str, model=MODEL_GPT4_TURBO, max_toke
     return ask_question_gpt(question = question, role = role, model = model, max_tokens= max_tokens, verbose=verbose, temperature=temperature, top_p=top_p, json_on=json_on)
 
 def embed_text(text:str, max_attempts:int=3, model=MODEL_EMB_LARGE) -> Optional[list[float]]:
-    '''
+    """
     Micro function which returns the embedding of one chunk of text or 0 if issue.
     Used for the multi-threading.
 
     Model is the new large new embedding one. Use Small if speed is a concern.
     Returns None if issue.
-    '''
-    if text == "": return res
-    if not isinstance(text, str):
-        log_warning("You need to input a string", embed_text, f"You inputed {type(text)}")
-        return
-    attempts = 0
-    while attempts < max_attempts:
-        try:
-            res = client.embeddings.create(
-                model=model,
-                input=text,
-                encoding_format="float"
-                ).data[0].embedding
-            return res
-        except Exception as e:
-            if not check_co():
-                log_warning("Warning: You don't have internet. Embedding will not work")
-                return
-            attempts += 1
-            log_warning(f"We faced {e} * Attempt: #{attempts}/ 3", embed_text)
-    log_issue(f"No answer despite {max_attempts} attempts", embed_text, f"This was the text: {text[:100]}")
+    """
+    try:
+        if text == "": return
+        if not isinstance(text, str):
+            log_warning("You need to input a string", embed_text, f"You inputed {type(text)}")
+            return
+        attempts = 0
+        while attempts < max_attempts:
+            try:
+                res = client.embeddings.create(
+                    model=model,
+                    input=text,
+                    encoding_format="float"
+                    ).data[0].embedding
+                return res
+            except Exception as e:
+                if not check_co():
+                    log_warning("Warning: You don't have internet. Embedding will not work")
+                    return
+                attempts += 1
+                log_warning(f"We faced {e} * Attempt: #{attempts}/ 3", embed_text)
+        log_issue(f"No answer despite {max_attempts} attempts", embed_text, f"This was the text: {text[:100]}")
+    except Exception as e:
+        log_issue(e, embed_text, f"For text {text[:300] + ("..." if len(text)> 300 else "")}")
 
 def request_chatgpt(current_chat: list, max_tokens: int, stop_list=False, max_attempts=3, model=MODEL_CHAT, temperature=0, top_p=1, json_on=False) -> str:
     """

@@ -1,34 +1,25 @@
-"""
-    @Author:				Henry Obegi <HenryObj>
-    @Email:					hobegi@gmail.com
-    @Creation:				Friday 10th of February
-    @LastModif:             Sunday 10th of October 2023
-    @Filename:				web.py
-    @Purpose                Functions related to fetching content from the web
-    @Partof                 PIP package
-"""
+#   Functions related to fetching content from the web
 
-# ************** IMPORTS ****************
 
-from .base import *
+from .base import log_issue, remove_excess, remove_non_printable
+from .config import HTTP_URL_PATTERN, HEADERS
 from .oai import print_len_token_price
 
-from bs4 import BeautifulSoup
-import concurrent.futures
-from collections import deque
+
+from urllib.parse import urlparse, urlunparse, quote, unquote
 from requests.adapters import HTTPAdapter
 from requests.exceptions import SSLError
 from urllib3.util.retry import Retry
 from urllib.parse import urljoin
+from bs4 import BeautifulSoup
+from collections import deque
+from typing import Optional
 
-# ****** PATHS & GLOBAL VARIABLES *******
-
-HTTP_URL_PATTERN = r'^http[s]?://.+'   # Regex pattern to match a URL
-HTTP_STRICT_URL_PATTERN = r'https?://[\\w/:%#\\$&\\?\\(\\)~\\.=\\+\\-]+'
-
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3",
-}
+import concurrent.futures
+import requests
+import random
+import time
+import re
 
 # ****** SET UP SESSION OBJECT FOR SCRAPPING *******
 
@@ -132,6 +123,24 @@ def clean_url_into_title(url: str) -> str:
     domain = parsed_url.netloc.replace('www.', '')
     path = parsed_url.path.strip('/')
     return f"{domain}/{path}"
+
+def content_type_is_text(content_type):
+    '''
+    Used to skip if content_type.startswith("image") or content_type.startswith("application/pdf").
+    Now, we skip if it's not text or xml.
+    '''
+    if content_type.startswith("text") or content_type.startswith("application/xhtml+xml"):
+        return True
+    else:
+        return False
+
+def crawl_handle_fetch_result(future, data_name, memory_store) -> None:
+    """
+    Handles fetched data and stores it in-memory.
+    """
+    content = future.result()
+    if content is not None:
+        memory_store[data_name] = content
 
 def crawl_website(url: str, how_many_pages = 30, memory_store = None) -> dict:
     """
@@ -270,6 +279,11 @@ def fetch_domain_links(local_domain, url):
         log_issue(e, fetch_domain_links, f"For {url} and {local_domain}")
     return clean_links
 
+def get_primary_lang_code(lang_data: str) -> str:
+    # Split the lang_data by comma and extract the main language code of the first segment
+    primary_lang_code = lang_data.split(",")[0].split("-")[0]
+    return primary_lang_code
+
 def remove_citations(soup: BeautifulSoup) -> BeautifulSoup:
     """
     Remove citation tags from a BeautifulSoup object.
@@ -313,24 +327,63 @@ def wrap_handle_fetch_result(future, data_name, memory_store):
     '''
     crawl_handle_fetch_result(future, data_name, memory_store)
 
-def crawl_handle_fetch_result(future, data_name, memory_store) -> None:
-    """
-    Handles fetched data and stores it in-memory.
-    """
-    content = future.result()
-    if content is not None:
-        memory_store[data_name] = content
 
-def content_type_is_text(content_type):
+def check_co() -> bool:
     '''
-    Used to skip if content_type.startswith("image") or content_type.startswith("application/pdf").
-    Now, we skip if it's not text or xml.
+    Returns true if we have an internet connection. False otherwise.
     '''
-    if content_type.startswith("text") or content_type.startswith("application/xhtml+xml"):
+    try:
+        requests.head("http://google.com")
         return True
-    else:
+    except Exception:
         return False
 
+def check_valid_url(url):
+    '''
+    Function which takes a string and return True if the url is valid.
+    '''
+    try:
+        result = urlparse(url)
+        if len(result.netloc) <= 1: return False # Checks if the user has put a local file
+        return all([result.scheme, result.netloc])
+    except ValueError:
+        return False
+
+def clean_url(url):
+    '''
+    User-submitted urls might not be perfectly fit to be processed by check_valid_url
+    '''
+    url = url.strip()
+    if not url.startswith('http'):
+        url = 'https://' + url
+    parsed_url = urlparse(url)
+
+    # Clean the domain by removing any unwanted characters
+    cleaned_netloc = re.sub(r'[^a-zA-Z0-9\.\-]', '', parsed_url.netloc)
+
+    # Ensure proper percent-encoding of the path component
+    unquoted_path = unquote(parsed_url.path)
+    quoted_path = quote(unquoted_path)
+
+    cleaned_url = urlunparse(parsed_url._replace(netloc=cleaned_netloc, path=quoted_path))
+    return cleaned_url
+
+def get_local_domain(from_url):
+    '''
+    Get the local domain from a given URL.
+    Will return the same domain for https://chat.openai.com/chat" and https://openai.com/chat".
+    '''
+    try:
+        netloc = urlparse(from_url).netloc
+        parts = netloc.split(".")
+        if len(parts) > 2:
+            domain = parts[-2]
+        else:
+            domain = parts[0]
+        print("URL: ", from_url, " Domain: ", str(domain))
+        return str(domain)
+    except Exception as e:
+        log_issue(e, get_local_domain, f"For {from_url}")
 
 # *************************************************************
 if __name__ == "__main__":

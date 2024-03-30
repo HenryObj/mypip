@@ -1,27 +1,20 @@
+# Giving access to preconfigured GPT4 roles and functions.
 
-"""
-    @Author:				Henry Obegi <HenryObj>
-    @Email:					hobegi@gmail.com
-    @Creation:			    Thursday 18th of January 2024
-    @LastModif:             Wednesday 28th of February 2024
-    @Filename:			    gpt.py
-    @Purpose                Giving access to preconfigured GPT4 roles and functions.
-    @Partof                 PIP package
-"""
 
-# ************** IMPORTS ****************
-from .oai import *
-import sys
+from .config import MAX_TOKEN_WINDOW_GPT4_TURBO, LARGE_INPUT_THRESHOLD, BUFFER_README_INPUT
+from .base import read_gitignore, remove_excess, get_now
+from .oai import calculate_token, ask_question_gpt4
+
+
+from typing import Optional
 import threading
+import time
+import sys
+import os
 
-# ****** PATHS & GLOBAL VARIABLES *******
 
-BUFFER_README_INPUT = 30000
-LARGE_INPUT_THRESHOLD = 10000  # Threshold for considering an input as large
 
-# *************************************************************************************************
 # *************************************** SUPPORT FUNCS *******************************************
-# *************************************************************************************************
 
 def contains_code(file_path: str) -> bool:
     """
@@ -79,9 +72,7 @@ def progress_indicator(message: str):
     sys.stdout.write("\r" + " " * (len(message) + 5) + "\r")  # Clear line
     sys.stdout.flush()
 
-# *************************************************************************************************
 # ****************************************** GPT FUNCS ********************************************
-# *************************************************************************************************
 
 def gpt_bugbounty_generator(repository_path: str) -> str:
     """
@@ -164,9 +155,7 @@ def gpt_generate_readme(repository_path: str, verbose = True) -> None:
         print(f"✅ ReadMe is completed and available here 👉 {readme_path}")
 
 
-# *************************************************************************************************
 # ****************************************** PROMPTS **********************************************
-# *************************************************************************************************
     
 ROLE_README_GENERATOR = """
 You are the best CTO and README.md writer. You follow best practices, you pay close attention to details and you are highly rigorous.
