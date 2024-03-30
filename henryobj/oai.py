@@ -5,8 +5,8 @@ from .config import (
     MAX_TOKEN_WINDOW_GPT4_TURBO, MAX_TOKEN_WINDOW_OLD, MAX_TOKEN_WINDOW_GPT35_TURBO, MODEL_GPT4_TURBO,
     MODEL_GPT4_STABLE, MODEL_CHAT, MODEL_EMB_LARGE, MODEL_CHAT_STABLE, MODEL_CHAT_BACKUP
 )
-from .base import log_warning, log_issue, split_into_sentences, custom_round
-from .web import check_co
+from .base import log_warning, log_issue, split_into_sentences, custom_round, check_co
+
 
 from typing import Optional
 

@@ -1,4 +1,3 @@
-
 # Utility functions
 
 
@@ -9,6 +8,7 @@ from typing import Callable, Any, Union, Optional
 from collections import Counter
 import pathspec
 import datetime
+import requests
 import inspect
 import random
 import json
@@ -19,6 +19,16 @@ import re
 
 
 # *************************************** General Utilities ***************************************
+
+def check_co() -> bool:
+    '''
+    Returns true if we have an internet connection. False otherwise.
+    '''
+    try:
+        requests.head("http://google.com")
+        return True
+    except Exception:
+        return False
 
 def check__if_password_safe(password: str) -> bool:
     """

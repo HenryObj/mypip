@@ -327,17 +327,6 @@ def wrap_handle_fetch_result(future, data_name, memory_store):
     '''
     crawl_handle_fetch_result(future, data_name, memory_store)
 
-
-def check_co() -> bool:
-    '''
-    Returns true if we have an internet connection. False otherwise.
-    '''
-    try:
-        requests.head("http://google.com")
-        return True
-    except Exception:
-        return False
-
 def check_valid_url(url):
     '''
     Function which takes a string and return True if the url is valid.
