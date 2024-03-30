@@ -453,7 +453,7 @@ def embed_text(text:str, max_attempts:int=3, model=MODEL_EMB_LARGE) -> Optional[
                 log_warning(f"We faced {e} * Attempt: #{attempts}/ 3", embed_text)
         log_issue(f"No answer despite {max_attempts} attempts", embed_text, f"This was the text: {text[:100]}")
     except Exception as e:
-        log_issue(e, embed_text, f"For text {text[:300] + ("..." if len(text)> 300 else "")}")
+        log_issue(e, embed_text, f"""For text {text[:300] + ('...' if len(text)> 300 else '')}""")
 
 def request_chatgpt(current_chat: list, max_tokens: int, stop_list=False, max_attempts=3, model=MODEL_CHAT, temperature=0, top_p=1, json_on=False) -> str:
     """

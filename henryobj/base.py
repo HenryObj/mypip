@@ -1,16 +1,9 @@
-"""
-    @Author:				Henry Obegi <HenryObj>
-    @Email:					hobegi@gmail.com
-    @Creation:				Friday 1st of September 2023
-    @LastModif:             Wednesday 28th of February 2024
-    @Filename:				base.py
-    @Purpose                All the utility functions
-    @Partof                 PIP package
-"""
 
-# ************** IMPORTS ****************
+# Utility functions
 
-from .config import *
+
+from .config import WARNING_UNKNOWN
+
 
 from typing import Callable, Any, Union, Optional
 from collections import Counter
@@ -24,13 +17,9 @@ import ast
 import os
 import re
 
-# ****** PATHS & GLOBAL VARIABLES *******
 
-WARNING_UNKNOWN = "\033[31mUNKNOWN\033[0m"
-
-# *************************************************************************************************
 # *************************************** General Utilities ***************************************
-# *************************************************************************************************
+
 def check__if_password_safe(password: str) -> bool:
     """
     Checks if a password is composed of regular chars or not.

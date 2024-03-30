@@ -1,4 +1,15 @@
+# PIP Package of utlity functions used in various projects
 
+# Made by Henry Obegi - hobegi@gmail.com
+# First version: September 2023
+# Last update: 30th of March 2024
+
+
+
+# ****** TEXT
+OPEN_AI_ISSUE = r"%$144$%" # When OpenAI is down
+ERROR_MESSAGE = "An error occurred and was logged"
+WARNING_UNKNOWN = "\033[31mUNKNOWN\033[0m"
 
 
 # ****** For Web
@@ -31,9 +42,6 @@ MODEL_OLD = r"text-embedding-ada-002"
 MODEL_EMB_LARGE = r"text-embedding-3-large"
 MODEL_EMB_SMALL = r"text-embedding-3-small"
 
-# ****** OTHER
-OPEN_AI_ISSUE = r"%$144$%" # When OpenAI is down
-ERROR_MESSAGE = "An error occurred and was logged"
 
 # ******* GPT
 BUFFER_README_INPUT = 30000
