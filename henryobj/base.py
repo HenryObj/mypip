@@ -1,7 +1,7 @@
 # Utility functions
 
 
-from .config import WARNING_UNKNOWN
+from .config import WARNING_UNKNOWN, CODE_ERR_PT, CODE_WARN_PT
 
 
 from typing import Callable, Any, Union, Optional
@@ -203,7 +203,7 @@ def log_issue(exception: Exception, func: Callable[..., Any], additional_info: s
     ****************************************""" if additional_info else ""
     print(f"""
     ----------------------------------------------------------------
-    🚨 ERROR HO144 🚨
+    🚨 ERROR 🚨
     Occurred: {now}
     Module: {module_name} | Function: {function_name}
     Exception: {exception}{additional}
@@ -246,6 +246,40 @@ def log_warning(warning:str, func: Callable[..., Any], additional_info: str = ""
     Warning message: {warning}{additional}
     ----------------------------------------------------------------
     """)
+
+def log_issue_papertrail(exception: Exception, func: Callable[..., Any], additional_info: str = "") -> None:
+    """
+    Same as log_issue but on one line with a special key to find it.
+    """
+    now = datetime.datetime.now().strftime("%d/%m/%y %H:%M:%S")
+    if hasattr(func, '__name__'):
+        function_name = func.__name__
+        module_name = get_module_name(func)
+    else:
+        function_name = func if isinstance(func, str) else WARNING_UNKNOWN
+        try:
+            module_name = get_module_name(func)
+        except:
+            module_name = "Couldn't get the module name"
+    additional = additional_info.replace("\n"," ") if additional_info else ""
+    print(f"🚨 {CODE_ERR_PT} 🚨 ** | {function_name} in {module_name} | {exception} ** {additional} | {now} | END")
+
+def log_warning_papertrail(exception: Exception, func: Callable[..., Any], additional_info: str = "") -> None:
+    """
+    Same as log_issue but on one line with a special key to find it.
+    """
+    now = datetime.datetime.now().strftime("%d/%m/%y %H:%M:%S")
+    if hasattr(func, '__name__'):
+        function_name = func.__name__
+        module_name = get_module_name(func)
+    else:
+        function_name = func if isinstance(func, str) else WARNING_UNKNOWN
+        try:
+            module_name = get_module_name(func)
+        except:
+            module_name = "Couldn't get the module name"
+    additional = additional_info.replace("\n"," ") if additional_info else ""
+    print(f"👋 {CODE_WARN_PT} 🟠 ** | {function_name} in {module_name} | {exception} ** {additional} | {now} | END")
 
 def print_style(message, color="blue", bold=False):
     """

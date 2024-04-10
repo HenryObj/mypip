@@ -13,6 +13,7 @@ from typing import Optional
 import tiktoken
 import openai
 import time
+import json
 import os
 import re
 
@@ -270,6 +271,15 @@ def initialize_role_in_chatTable(role_definition: str) -> list[dict[str, str]]:
     """
     return [{"role":"system", "content":role_definition}]
 
+def make_string_json_safe(s : str) -> str:
+    """
+    Replace newlines, tabs, and other control characters
+    """
+    s = s.replace('"', "'")
+    s = s.replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
+    s = s.strip()
+    return s
+
 def print_gpt_models(all:bool=True) -> None:
     """
     To list the gpt models provided by OpenAI.
@@ -312,6 +322,79 @@ def print_len_token_price(file_path_or_text, Embed = False):
     tok = calculate_token(content)
     out = f"{name}: {len(content)} chars  **  ~ {tok} tokens ** ~ ${round(tok/1000 * price,2)}"
     print(out)
+
+def repair_gpt_conversation(conversation_as_string: str) -> Optional[str]:
+    """
+    Repair a GPT conversation to ensure we can then json.loads() it.
+    Returns the fixed conversation. 
+    """
+    result = None
+    try:
+        new_list = []
+        user_ = r'{"role": "user", "content":'
+        assistant_ = r'{"role": "assistant", "content":'
+        len_a = len(assistant_)
+        len_u = len(user_)
+        while True:
+            bal_user = conversation_as_string.find(user_)
+            bal_assistant = conversation_as_string.find(assistant_)
+            # Cases: over-over / user-over / assistant-over THEN:: user-user / assistant-assistant / user-assistant / assistant-user
+            
+            # over-over
+            if bal_user == -1 and bal_assistant == -1: 
+                break
+            
+            next_bala = conversation_as_string.find(assistant_, bal_assistant + len_a)
+            next_balu = conversation_as_string.find(user_, bal_user + len_u)
+            
+            # assistant-over
+            if bal_user == -1 and next_bala == -1:
+                content = make_string_json_safe(conversation_as_string[bal_assistant + len_a: conversation_as_string.rfind("}")])
+                new_list.append({"role": "assistant", "content":content})
+                break
+            # user-over
+            if bal_assistant == -1 and next_balu == -1:
+                content = make_string_json_safe(conversation_as_string[bal_user + len_u: conversation_as_string.rfind("}")])
+                new_list.append({"role": "user", "content":content})
+                break
+            
+            # user-user
+            if (0 < bal_user < next_balu < bal_assistant or 
+                bal_assistant == -1 and 0 < bal_user < next_balu):
+                role = "user"
+                content = make_string_json_safe(conversation_as_string[bal_user + len_u: conversation_as_string.rfind("}", None, next_balu)])
+                conversation_as_string = conversation_as_string[conversation_as_string.rfind("}", None, next_balu):]
+            # assistant-assistant
+            elif (0 < bal_assistant < next_bala < bal_user or 
+                bal_user == -1 and 0 < bal_assistant < next_bala):
+                role = "assistant"
+                content = make_string_json_safe(conversation_as_string[bal_assistant + len_a: conversation_as_string.rfind("}", None, next_bala)])
+                conversation_as_string = conversation_as_string[conversation_as_string.rfind("}", None, next_bala):]
+            # user-assistant
+            elif 0 < bal_user < bal_assistant:
+                role = "user"
+                content = make_string_json_safe(conversation_as_string[bal_user + len_u: conversation_as_string.rfind("}", None, bal_assistant)])
+                conversation_as_string = conversation_as_string[conversation_as_string.rfind("}", None, bal_assistant):]
+            # assistant-user
+            elif 0 < bal_assistant < bal_user:
+                role = "assistant"
+                content = make_string_json_safe(conversation_as_string[bal_assistant + len_a: conversation_as_string.rfind("}", None, bal_user)])
+                conversation_as_string = conversation_as_string[conversation_as_string.rfind("}", None, bal_user):]
+            else:
+                print("issue - weird use case")
+                print(bal_assistant, bal_user, next_bala, next_balu)
+                print(conversation_as_string)
+                return
+            new_list.append({"role": role, "content":content})
+        try:
+            result = json.dumps(new_list)
+            json.loads(result)
+        except Exception as e:
+            log_issue(e, repair_gpt_conversation)
+            return
+    except Exception as e:
+        log_issue(e, repair_gpt_conversation)
+    return result
 
 def retry_if_too_short(func, *args, **kwargs):
     """

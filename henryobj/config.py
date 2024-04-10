@@ -46,3 +46,7 @@ MODEL_EMB_SMALL = r"text-embedding-3-small"
 # ******* GPT
 BUFFER_README_INPUT = 30000
 LARGE_INPUT_THRESHOLD = 10000  # Threshold for considering an input as large
+
+# ******* Papertrail
+CODE_ERR_PT = r"HO144"
+CODE_WARN_PT = r"HO69"
