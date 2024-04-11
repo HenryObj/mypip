@@ -21,9 +21,9 @@ import re
 # *************************************** General Utilities ***************************************
 
 def check_co() -> bool:
-    '''
+    """
     Returns true if we have an internet connection. False otherwise.
-    '''
+    """
     try:
         requests.head("http://google.com")
         return True

@@ -142,19 +142,34 @@ def check_for_ai_warning(text: str) -> bool:
     # re.IGNORECASE makes the search case-insensitive.
     return bool(re.search(pattern, text, re.IGNORECASE))
 
-def check_if_gptconv_format(conversation: list[dict[str, str]]) -> bool:
+def check_if_gptconv_format(conversation: list[dict[str, str]]) -> Optional[bool]:
     """
     Checks if the structure of the list matches the GPT conversation format.
     
     Returns:
     - bool: True if valid, False otherwise.
     """
+    allowed_roles = {'user', 'assistant', 'system'}
     for entry in conversation:
-        if not set(entry.keys()) == {'role', 'content'}:
-            return False
-        if not isinstance(entry['role'], str) or not isinstance(entry['content'], str):
-            return False
+        if not set(entry.keys()) == {'role', 'content'}: return
+        if not isinstance(entry['role'], str) or not isinstance(entry['content'], str): return
+        if entry['role'] not in allowed_roles: return
     return True
+
+def check_valid_gpt_conversation(possible_gpt_conv) -> Optional[bool]:
+    """
+    Returns True / False depending on whether it is a valid GPT conv.
+    
+    Args:
+        Can be a string or list, it doesn't matter. It will check that the internal elements match the GPT format.
+    """
+    try:
+        gpt_conv = possible_gpt_conv if isinstance(possible_gpt_conv, list) else json.loads(possible_gpt_conv)
+        if not isinstance(gpt_conv, list): return
+        if not all([isinstance(elem, dict) for elem in gpt_conv]): return
+        return check_if_gptconv_format(gpt_conv)
+    except:
+        return
 
 def new_chunk_text(text: str, target_token: int = 200) -> list[str]:
     """

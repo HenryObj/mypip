@@ -23,12 +23,12 @@ import re
 
 # ****** SET UP SESSION OBJECT FOR SCRAPPING *******
 
-'''
+"""
     500: Internal Server Error, which indicates that the server encountered an error while processing the request.
     502: Bad Gateway, which indicates that the server, while acting as a gateway or proxy, received an invalid response from the upstream server it accessed in attempting to fulfill the request.
     504: Gateway Timeout, which indicates that the server, while acting as a gateway or proxy, did not receive a timely response from the upstream server.
     These status codes are chosen because they represent temporary issues that may be resolved on subsequent requests.
-'''
+"""
 
 def create_session(max_retries: int = 3, backoff_factor: float = 0.3, status_forcelist: tuple = (500, 502, 504)) -> requests.Session:
     """
@@ -125,10 +125,10 @@ def clean_url_into_title(url: str) -> str:
     return f"{domain}/{path}"
 
 def content_type_is_text(content_type):
-    '''
+    """
     Used to skip if content_type.startswith("image") or content_type.startswith("application/pdf").
     Now, we skip if it's not text or xml.
-    '''
+    """
     if content_type.startswith("text") or content_type.startswith("application/xhtml+xml"):
         return True
     else:
@@ -224,10 +224,10 @@ def fetch_content_url(url: str, attempt: int = 0) -> Optional[str]:
         return None
 
 def is_useful_link(tag):
-    '''
+    """
     Mini function to check if a link is surrounded with content, hence useful, or alone.
     Return True if useful, False otherwise.
-    '''
+    """
    # Check previous and next siblings
     prev_sibling = tag.previous_sibling
     next_sibling = tag.next_sibling
@@ -244,10 +244,10 @@ def is_useful_link(tag):
     return False
 
 def fetch_domain_links(local_domain, url):
-    '''
+    """
     Returns the list of all unique urls of a given domain. Search start from a specific page (url).
     Doesn't return links that are not part of the domain.
-    '''
+    """
     clean_links = set()
     try:
         raw_links = fetch_hyperlinks(url)
@@ -310,9 +310,9 @@ def remove_long_sentences(text: str, max_words: int = 50) -> str:
     return ' '.join(cleaned_sentences)
 
 def remove_reviews(soup : BeautifulSoup) -> BeautifulSoup:
-    '''
+    """
     Slightly risky function which removes the reviews from a Shopify store.
-    '''
+    """
     pattern = re.compile(r'data-verified-.*|review.*')
     for div in soup.find_all('div'):
         if div.attrs is not None: 
@@ -322,15 +322,15 @@ def remove_reviews(soup : BeautifulSoup) -> BeautifulSoup:
     return soup
 
 def wrap_handle_fetch_result(future, data_name, memory_store):
-    '''
+    """
     Wrapper to allow adding paramaters to the callback function.
-    '''
+    """
     crawl_handle_fetch_result(future, data_name, memory_store)
 
 def check_valid_url(url):
-    '''
+    """
     Function which takes a string and return True if the url is valid.
-    '''
+    """
     try:
         result = urlparse(url)
         if len(result.netloc) <= 1: return False # Checks if the user has put a local file
@@ -339,9 +339,9 @@ def check_valid_url(url):
         return False
 
 def clean_url(url):
-    '''
+    """
     User-submitted urls might not be perfectly fit to be processed by check_valid_url
-    '''
+    """
     url = url.strip()
     if not url.startswith('http'):
         url = 'https://' + url
@@ -358,10 +358,10 @@ def clean_url(url):
     return cleaned_url
 
 def get_local_domain(from_url):
-    '''
+    """
     Get the local domain from a given URL.
     Will return the same domain for https://chat.openai.com/chat" and https://openai.com/chat".
-    '''
+    """
     try:
         netloc = urlparse(from_url).netloc
         parts = netloc.split(".")

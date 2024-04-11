@@ -293,22 +293,3 @@ def generate_role_bug_bounty_reviewer(current_readme: str) -> str:
     
 if __name__ == "__main__":
     pass
-   
-# WIP for future functions
-'''
-# Example of Request
-REQUEST_WRITE_TEST = """
-Write all the tests functions to ensure that the endpoints are correctly working. 
-The tests must be broken down into smaller functions. If data is added to the DB, the data should then be removed from the DB if possible (ex: using the /delete endpoint).
-print() statements must be used extensively to log on the console the various step and results of those tests.
-Below is an example for the endpoints /training. Obviously, you need to do something more complete that this example and test ALL endpoints by calling one main functions which itself calls many smaller functions.
-Provide a perfect code, ready to use, with all typing hints and simple docstrings.
-"""
-
-# Example of Request
-REQUEST_REFACTOR = """
-The file assistant.py is poorly made. It composes code snippets, some are useful, others are not. 
-What we want is to refactor all this code to have all functions written as cleanly as oai_upload_file.
-Write all functions needed to achieve the above results. Only return the code with the typing hint for each one.
-"""
-'''
