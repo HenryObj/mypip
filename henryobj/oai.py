@@ -30,15 +30,21 @@ client = openai.OpenAI(
 
 # ****************************************** SUPPORT TO LLM ***************************************
 
-def add_content_to_chatTable(content: str, role: str, chatTable: list[dict[str, str]]) -> list[dict[str, str]]:
+def add_content_to_chatTable(content: str, role: str, chatTable: list[dict[str, str]]) -> Optional[list[dict[str, str]]]:
     """
     Feeds a chatTable with the new query. Returns the new chatTable.
-    Role is either 'assistant' when the AI is answering or 'user' when the user has a question.
-    Added a security in case change of name.
+    Role is either 'assistant' when the AI is answering or 'user' when the user has a question. Returns None if issue
+
+    Note:
+        - Security for the content (json_safe)
     """
     new_chatTable = list(chatTable)
     normalized_role = role.lower()
-    if normalized_role in ["user", "client"]:
+    if normalized_role not in ["user", "assistant"]: 
+        log_issue("Wrong role for the Chattable", add_content_to_chatTable, f"Role use is {role}")
+        return
+    content = make_string_json_safe(content)
+    if normalized_role == "user":
         new_chatTable.append({"role": "user", "content": content})
     else:
         new_chatTable.append({"role": "assistant", "content": content})
@@ -283,8 +289,12 @@ def initialize_role_in_chatTable(role_definition: str) -> list[dict[str, str]]:
     """
     We need to define how we want our model to perform.
     This function takes this definition as a input and returns it into the chat_table_format.
+
+    Note:
+        Makes the role json_safe
     """
-    return [{"role":"system", "content":role_definition}]
+    safe_role = make_string_json_safe(role_definition)
+    return [{"role":"system", "content":safe_role}]
 
 def make_string_json_safe(s : str) -> str:
     """
