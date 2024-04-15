@@ -305,7 +305,7 @@ def remove_long_sentences(text: str, max_words: int = 50) -> str:
     """
     # Use regex to split text into sentences
     #re.split(r'(?<!\w\.\w.)(?<![A-Z][a-z]\.)(?<=\.|\?)\s', text)
-    sentences = re.split('(?<!\w\.\w.)(?<![A-Z][a-z]\.)(?<=\.|\?)\s', text)
+    sentences = re.split(r'(?<!\w\.\w.)(?<![A-Z][a-z]\.)(?<=\.|\?)\s', text)
     cleaned_sentences = [sentence for sentence in sentences if len(sentence.split()) <= max_words]
     return ' '.join(cleaned_sentences)
 
