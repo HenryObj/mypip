@@ -3,7 +3,7 @@
 from .config import (
     ERROR_MESSAGE, OPEN_AI_ISSUE, MAX_TOKEN_OUTPUT_DEFAULT, MAX_TOKEN_OUTPUT_DEFAULT_HUGE, MAX_TOKEN_WINDOW_GPT4, 
     MAX_TOKEN_WINDOW_GPT4_TURBO, MAX_TOKEN_WINDOW_OLD, MAX_TOKEN_WINDOW_GPT35_TURBO, MODEL_GPT4_TURBO,
-    MODEL_GPT4_STABLE, MODEL_CHAT, MODEL_EMB_LARGE, MODEL_CHAT_STABLE, MODEL_CHAT_BACKUP
+    MODEL_GPT4_STABLE, MODEL_CHAT, MODEL_EMB_LARGE, MODEL_CHAT_STABLE, MODEL_CHAT_BACKUP, WINDOW_BUFFER
 )
 from .base import log_warning, log_issue, split_into_sentences, custom_round, check_co
 
@@ -506,11 +506,11 @@ def ask_question_gpt(question:str, role:str = "", model:str = MODEL_CHAT, max_to
         str: The model's reply to the question.
     """
     max_token_window = {
-        MODEL_GPT4_TURBO: MAX_TOKEN_WINDOW_GPT4_TURBO,
-        MODEL_GPT4_STABLE: MAX_TOKEN_WINDOW_GPT4,
-        MODEL_CHAT: MAX_TOKEN_WINDOW_GPT35_TURBO,
-        MODEL_CHAT_STABLE: MAX_TOKEN_WINDOW_GPT35_TURBO,
-    }.get(model, MAX_TOKEN_WINDOW_OLD)
+        MODEL_GPT4_TURBO: MAX_TOKEN_WINDOW_GPT4_TURBO - WINDOW_BUFFER,
+        MODEL_GPT4_STABLE: MAX_TOKEN_WINDOW_GPT4 - WINDOW_BUFFER,
+        MODEL_CHAT: MAX_TOKEN_WINDOW_GPT35_TURBO - WINDOW_BUFFER,
+        MODEL_CHAT_STABLE: MAX_TOKEN_WINDOW_GPT35_TURBO - WINDOW_BUFFER,
+    }.get(model, MAX_TOKEN_WINDOW_OLD - WINDOW_BUFFER)
     initial_token_usage = calculate_token(role) + calculate_token(question)
     if initial_token_usage > max_token_window:
         print("Your input is too large for the query regardless of the max_tokens for the reply.")
