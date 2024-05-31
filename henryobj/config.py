@@ -2,7 +2,7 @@
 
 # Made by Henry Obegi - hobegi@gmail.com
 # First version: September 2023
-# Last update: 30th of March 2024
+# Last update: 31st of May 2024
 
 
 
@@ -29,9 +29,11 @@ MAX_TOKEN_WINDOW_OLD = 4096
 MAX_TOKEN_WINDOW_GPT4_TURBO = 128000
 MAX_TOKEN_WINDOW_GPT35_TURBO = 16385
 MAX_TOKEN_WINDOW_GPT4 = 8192
-WINDOW_BUFFER = 100
+WINDOW_BUFFER = 150
 
 # ****** MODELS
+MODEL_GPT4O = r"gpt-4o"
+
 MODEL_GPT4_TURBO = r"gpt-4-1106-preview" #Max 128,000 token context window total with 4,096 output
 MODEL_GPT4_STABLE = r"gpt-4" # 8K context window and 4,096 output
 

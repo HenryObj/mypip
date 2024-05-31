@@ -336,11 +336,11 @@ def perf(function: Callable[..., Any]):
     """
     To be used as a decorator to a function to display the time to run the said function.
     """
-    start = time.perf_counter()
     def wrapper(*args, **kwargs):
-        res = function(*args,**kwargs)
-        end = time.perf_counter()
-        duration = round((end-start), 2)
+        start = time.perf_counter()  # Start timing here
+        res = function(*args, **kwargs)
+        end = time.perf_counter()  # End timing here
+        duration = round((end - start), 2)
         print(f"{function.__name__} done in {duration} seconds")
         return res
     return wrapper

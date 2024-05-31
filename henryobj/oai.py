@@ -2,7 +2,7 @@
 
 from .config import (
     ERROR_MESSAGE, OPEN_AI_ISSUE, MAX_TOKEN_OUTPUT_DEFAULT, MAX_TOKEN_OUTPUT_DEFAULT_HUGE, MAX_TOKEN_WINDOW_GPT4, 
-    MAX_TOKEN_WINDOW_GPT4_TURBO, MAX_TOKEN_WINDOW_OLD, MAX_TOKEN_WINDOW_GPT35_TURBO, MODEL_GPT4_TURBO,
+    MAX_TOKEN_WINDOW_GPT4_TURBO, MAX_TOKEN_WINDOW_OLD, MAX_TOKEN_WINDOW_GPT35_TURBO, MODEL_GPT4_TURBO, MODEL_GPT4O,
     MODEL_GPT4_STABLE, MODEL_CHAT, MODEL_EMB_LARGE, MODEL_CHAT_STABLE, MODEL_CHAT_BACKUP, WINDOW_BUFFER
 )
 from .base import log_warning, log_issue, split_into_sentences, custom_round, check_co
@@ -492,12 +492,12 @@ def self_affirmation_role(role_chatbot_in_text: str) -> str:
 
 def ask_question_gpt(question:str, role:str = "", model:str = MODEL_CHAT, max_tokens:int = MAX_TOKEN_OUTPUT_DEFAULT, verbose:bool = True, temperature=0, top_p=1, json_on: bool = False) -> str:
     """
-    Queries an OpenAI GPT model (GPT-3.5 Turbo or GPT-4) with a specific question.
+    Queries an OpenAI GPT model (GPT-3.5 Turbo / GPT-4 / GPT-4O) with a specific question.
 
     Args:
         question (str): The question to ask the model.
         role (str, optional): System prompt to be initialized in the chat table, defining ChatGPT's behavior.
-        model (str, optional): The model to use. Defaults to GPT-3.5 Turbo. To choose GPT 4, use 'MODEL_GPT4_TURBO'
+        model (str, optional): The model to use. Defaults to GPT-3.5 Turbo. To choose GPT-4O, use 'MODEL_GPT4O' or call 'ask_question_gpto'.
         max_tokens (int, optional): Maximum number of tokens for the answer.
         verbose (bool, optional): Will print information in the console.
         json_on (bool, optional): Whether to force the output in JSON format // UNUSED FOR NOW
@@ -507,6 +507,7 @@ def ask_question_gpt(question:str, role:str = "", model:str = MODEL_CHAT, max_to
     """
     max_token_window = {
         MODEL_GPT4_TURBO: MAX_TOKEN_WINDOW_GPT4_TURBO - WINDOW_BUFFER,
+        MODEL_GPT4O: MAX_TOKEN_WINDOW_GPT4_TURBO - WINDOW_BUFFER,
         MODEL_GPT4_STABLE: MAX_TOKEN_WINDOW_GPT4 - WINDOW_BUFFER,
         MODEL_CHAT: MAX_TOKEN_WINDOW_GPT35_TURBO - WINDOW_BUFFER,
         MODEL_CHAT_STABLE: MAX_TOKEN_WINDOW_GPT35_TURBO - WINDOW_BUFFER,
@@ -526,6 +527,12 @@ def ask_question_gpt(question:str, role:str = "", model:str = MODEL_CHAT, max_to
     return request_chatgpt(current_chat, max_tokens=max_tokens, model=model, temperature=temperature,top_p=top_p, json_on=json_on)
 
 def ask_question_gpt4(question: str, role: str, model=MODEL_GPT4_TURBO, max_tokens=MAX_TOKEN_OUTPUT_DEFAULT_HUGE, verbose = False, temperature=0, top_p=1, json_on=False) -> str:
+    """
+    Queries Chat GPT 4 with a specific question if too lazy to change the param in ask_question_gpt)
+    """
+    return ask_question_gpt(question = question, role = role, model = model, max_tokens= max_tokens, verbose=verbose, temperature=temperature, top_p=top_p, json_on=json_on)
+
+def ask_question_gpto(question: str, role: str, model=MODEL_GPT4_TURBO, max_tokens=MAX_TOKEN_OUTPUT_DEFAULT_HUGE, verbose = False, temperature=0, top_p=1, json_on=False) -> str:
     """
     Queries Chat GPT 4 with a specific question if too lazy to change the param in ask_question_gpt)
     """
@@ -572,7 +579,7 @@ def request_chatgpt(current_chat: list, max_tokens: int, stop_list=False, max_at
         max_tokens (int, optional): Maximum number of tokens for the answer.
         stop_list (bool, optional): Whether to use specific stop tokens. Defaults to False.
         max_attempts (int, optional): Maximum number of retries. Defaults to 3.
-        model (str, optional): ChatGPT OpenAI model used for the request. Defaults to 'MODEL_CHAT'.
+        model (str, optional): ChatGPT OpenAI model used for the request. Defaults to the GPT-3.5 Turbo
         temperature (float, optional): Sampling temperature for the response. A value of 0 means deterministic output. Defaults to 0.
         top_p (float, optional): Nucleus sampling parameter, with 1 being 'take the best'. Defaults to 1.
         json (bool, optional): Whether we want to force the output in JSON or not.
