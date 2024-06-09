@@ -53,3 +53,4 @@ LARGE_INPUT_THRESHOLD = 10000  # Threshold for considering an input as large
 # ******* Papertrail
 CODE_ERR_PT = r"HO144"
 CODE_WARN_PT = r"HO69"
+CODE_DAILY_PT = r"HO1989"

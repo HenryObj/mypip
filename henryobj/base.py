@@ -1,7 +1,7 @@
 # Utility functions
 
 
-from .config import WARNING_UNKNOWN, CODE_ERR_PT, CODE_WARN_PT
+from .config import WARNING_UNKNOWN, CODE_ERR_PT, CODE_WARN_PT, CODE_DAILY_PT
 
 
 from typing import Callable, Any, Union, Optional
@@ -247,9 +247,9 @@ def log_warning(warning:str, func: Callable[..., Any], additional_info: str = ""
     ----------------------------------------------------------------
     """)
 
-def log_issue_papertrail(exception: Exception, func: Callable[..., Any], additional_info: str = "") -> None:
+def log_papertrail(exception: Exception, func: Callable[..., Any], log_level: str, icon: str, additional_info: str = "") -> None:
     """
-    Same as log_issue but on one line with a special key to find it.
+    Base logging function for Papertrail.
     """
     now = datetime.datetime.now().strftime("%d/%m/%y %H:%M:%S")
     if hasattr(func, '__name__'):
@@ -259,27 +259,29 @@ def log_issue_papertrail(exception: Exception, func: Callable[..., Any], additio
         function_name = func if isinstance(func, str) else WARNING_UNKNOWN
         try:
             module_name = get_module_name(func)
-        except:
+        except Exception:
             module_name = "Couldn't get the module name"
-    additional = additional_info.replace("\n"," ") if additional_info else ""
-    print(f"🚨 {CODE_ERR_PT} 🚨 ** | {function_name} in {module_name} | {exception} ** {additional} | {now} | END")
+    additional = additional_info.replace("\n", " ") if additional_info else ""
+    print(f"{icon} {log_level} ** | {function_name} in {module_name} | {exception} ** {additional} | {now} | END")
+
+def log_issue_papertrail(exception: Exception, func: Callable[..., Any], additional_info: str = "") -> None:
+    """
+    Logging function for Papertrail for Errors (Hourly).
+    """
+    log_papertrail(exception, func, CODE_ERR_PT, "🚨", additional_info)
 
 def log_warning_papertrail(exception: Exception, func: Callable[..., Any], additional_info: str = "") -> None:
     """
-    Same as log_issue but on one line with a special key to find it.
+    Logging function for Papertrail for warnings (Hourly).
     """
-    now = datetime.datetime.now().strftime("%d/%m/%y %H:%M:%S")
-    if hasattr(func, '__name__'):
-        function_name = func.__name__
-        module_name = get_module_name(func)
-    else:
-        function_name = func if isinstance(func, str) else WARNING_UNKNOWN
-        try:
-            module_name = get_module_name(func)
-        except:
-            module_name = "Couldn't get the module name"
-    additional = additional_info.replace("\n"," ") if additional_info else ""
-    print(f"👋 {CODE_WARN_PT} 🟠 ** | {function_name} in {module_name} | {exception} ** {additional} | {now} | END")
+    log_papertrail(exception, func, CODE_WARN_PT, "🟠", additional_info)
+
+def log_work_papertrail(exception: Exception, func: Callable[..., Any], additional_info: str = "") -> None:
+    """
+    Logging function for Papertrail for elements that need to be reviewed daily.
+    """
+    log_papertrail(exception, func, CODE_DAILY_PT, "🟡", additional_info)
+
 
 def print_style(message, color="blue", bold=False):
     """
