@@ -422,12 +422,8 @@ def remove_excess(text: str) -> str:
     """
     Replaces all occurrences of double newlines ('\n\n') and double spaces with single newline and space, respectively.
     """
-    double_jump = '\n\n'
-    double_space = '  '
-    while double_jump in text:
-        text = text.replace(double_jump, '\n')
-    while double_space in text:
-        text = text.replace(double_space, ' ')
+    text = re.sub(r'\n\s*\n', '\n', text) # Replace multiple newlines with a single newline
+    text = re.sub(r' {2,}', ' ', text)  # Replace multiple spaces with a single space
     return text
 
 def remove_non_printable(text :str) -> str:
