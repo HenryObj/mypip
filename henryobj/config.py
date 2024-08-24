@@ -37,9 +37,8 @@ MODEL_GPT4O = r"gpt-4o"
 MODEL_GPT4_TURBO = r"gpt-4-1106-preview" #Max 128,000 token context window total with 4,096 output
 MODEL_GPT4_STABLE = r"gpt-4" # 8K context window and 4,096 output
 
-MODEL_CHAT_BACKUP = r"gpt-3.5-turbo-1106" # Context 16,385 tokens - Reply 4,096
-MODEL_CHAT = r"gpt-3.5-turbo-0125"
-MODEL_CHAT_STABLE = r"gpt-3.5-turbo"
+MODEL_CHAT_BACKUP = r"gpt-3.5-turbo" # Context 16,385 tokens - Reply 4,096
+MODEL_CHAT = r"gpt-4o-mini"
 
 MODEL_OLD = r"text-embedding-ada-002"
 MODEL_EMB_LARGE = r"text-embedding-3-large"
